@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net7.0;netstandard2.1;net6.0;netcoreapp3.1</TargetFrameworks>
+    <Nullable>enable</Nullable>
+	 <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.2.1" />
+  </ItemGroup>
+
+</Project>
