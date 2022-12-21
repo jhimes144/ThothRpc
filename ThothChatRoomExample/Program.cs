@@ -27,7 +27,7 @@ namespace ThothChatRoomExample
 
             var username = AnsiConsole.Ask<string>("Please enter your user name that will identify you in the chat.");
             _client.SubmitSetUsername(username);
-            _client.DisplayUserNames();
+            _client.DisplayUserNames().Wait();
 
             ChatLoop();
         }

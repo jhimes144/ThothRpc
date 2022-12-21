@@ -57,12 +57,16 @@ namespace ThothRpc.Optimizer
         internal ThothOptimizer() { }
 
         /// <summary>
+        /// <para>
         /// This method will generate an auto target/method map of all Thoth methods found in all loaded assemblies.
         /// This will decrease the packet size of RPC calls.
-        /// In order for optimization to work, the peer codebase MUST contain an identical number of Thoth methods with identical names
+        /// </para>
+        /// <para>
+        /// In order for optimization to work, the peer codebase MUST contain an identical number of Thoth decorated methods with identical names
         /// from types of an identical fully qualified name as the current codebase. 
         /// In addition, the peer application must also call <see cref="Optimize()"/>.
         /// This method is best called at app startup.
+        /// </para>
         /// </summary>
         public void Optimize()
         {
@@ -70,12 +74,16 @@ namespace ThothRpc.Optimizer
         }
 
         /// <summary>
+        /// <para>
         /// This method will generate an auto target/method map of all Thoth methods found in the given assemblies.
         /// This will decrease the packet size of RPC calls.
-        /// In order for optimization to work, the peer codebase MUST contain an identical number of Thoth methods with identical names
+        /// </para>
+        /// <para>
+        /// In order for optimization to work, the peer codebase MUST contain an identical number of Thoth decorated methods with identical names
         /// from types of an identical fully qualified name as the current codebase. 
         /// In addition, the peer application must also call <see cref="Optimize(IEnumerable{Assembly}?)"/>.
         /// This method is best called at app startup.
+        /// </para>
         /// </summary>
         /// <param name="assemblies">The assemblies to search for Thoth methods.</param>
         public void Optimize(IEnumerable<Assembly>? assemblies)

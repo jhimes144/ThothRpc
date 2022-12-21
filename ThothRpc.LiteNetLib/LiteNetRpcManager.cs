@@ -30,6 +30,11 @@ namespace ThothRpc.LiteNetLib
 
         readonly ReaderWriterLockSlim _clientsLock = new ReaderWriterLockSlim();
 
+        /// <summary>
+        /// Gets the underlying network manager. For advance use.
+        /// </summary>
+        public NetManager UnderlyingManager => _manager;
+
         public LiteNetRpcManager(bool isClient)
         {
             _manager = new NetManager(_listener);

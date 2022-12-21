@@ -36,9 +36,16 @@ namespace ThothRpc.LiteNetLib
             _delegator = delegator;
         }
 
-        protected override void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
+        protected override async void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
         {
-            _delegator?.OnDataReceivedAsync(data);
+            if (_delegator != null)
+            {
+                _delegator?.OnDataReceivedAsync(data);
+            }
+            else
+            {
+                throw new InvalidOperationException("Expected _delegator not to be null");
+            }
         }
 
         protected override void OnPeerConnected(IPeerInfo peerInfo)

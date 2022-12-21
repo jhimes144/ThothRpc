@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using System;
+using System.Buffers;
 
 namespace ThothRpc.MessagePack
 {

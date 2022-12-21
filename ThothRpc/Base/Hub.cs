@@ -17,6 +17,7 @@ using ThothRpc.Models.Dto;
 using ThothRpc.Optimizer;
 using ThothRpc.Utility;
 
+// TODO: Move these to project file.
 [assembly: InternalsVisibleTo("ThothRpc.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 

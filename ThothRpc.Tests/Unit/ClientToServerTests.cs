@@ -175,7 +175,7 @@ namespace ThothRpc.Tests.Unit
         }
 
         [Test]
-        public void Client_To_Server_Timesout()
+        public void Client_To_Server_Timeout()
         {
             _serverServiceMock.Setup(s => s.ReturnAsync("hello"))
                 .ReturnsAsync("hello", TimeSpan.FromSeconds(1.2d));

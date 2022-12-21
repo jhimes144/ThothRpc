@@ -45,12 +45,6 @@ namespace ThothRpc.Base
             _memManager.MaximumFreeSmallPoolBytes = maximumFreeSmallPoolBytes;
         }
 
-        public IThothDto ClonePacket(IThothDto thothDto)
-        {
-            var data = SerializePacket(thothDto);
-            return DeserializePacket(data);
-        }
-
         public IThothDto DeserializePacket(byte[] data)
         {
             MethodResponseDto? methodResponse;
@@ -217,7 +211,7 @@ namespace ThothRpc.Base
 
                         if (hasCallId)
                         {
-                            BitConversion.WriteUInt(_rBuffer, methodCallDto.CallId.Value);
+                            BitConversion.WriteUInt(_rBuffer, methodCallDto.CallId.Value!);
                             mStream.Write(_rBuffer, 0, sizeof(uint));
                         }
 

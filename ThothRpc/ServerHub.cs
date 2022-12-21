@@ -12,13 +12,28 @@ using ThothRpc.Utility;
 
 namespace ThothRpc
 {
+    /// <summary>
+    /// Represents a server hub that listens for incoming connections and handles requests from clients.
+    /// </summary>
     public class ServerHub : Hub, IServerDelegator, IDisposable
     {
         readonly IServer _server;
 
+        /// <summary>
+        /// Occurs when a peer connects to the server hub.
+        /// </summary>
         public event EventHandler<PeerInfoEventArgs>? PeerConnected;
+
+        /// <summary>
+        /// Occurs when a peer disconnects from the server hub.
+        /// </summary>
         public event EventHandler<PeerInfoEventArgs>? PeerDisconnected;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServerHub"/> class.
+        /// </summary>
+        /// <param name="server">The underlying server instance.</param>
+        /// <param name="config">The configuration for the server hub.</param>
         public ServerHub(IServer server, IHubConfiguration config)
             : base(false, config)
         {
@@ -40,11 +55,23 @@ namespace ThothRpc
             _server.ProcessRequests();
         }
 
+        /// <summary>
+        /// Listens for incoming connections on the specified IPv4 nad IPv6 address and port.
+        /// </summary>
+        /// <param name="addressIPv4">The IPv4 address to listen on.</param>
+        /// <param name="addressIPv6">The IPv6 address to listen on.</param>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="connectionKey">The connection key to use for authentication.</param>
         public void Listen(string addressIPv4, string addressIPv6, int port, string connectionKey)
         {
             _server.Listen(addressIPv4, addressIPv6, port, connectionKey);
         }
 
+        /// <summary>
+        /// Listens for incoming connections on the specified port.
+        /// </summary>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="connectionKey">The connection key to use for authentication.</param>
         public void Listen(int port, string connectionKey)
         {
             _server.Listen(port, connectionKey);
@@ -94,57 +121,136 @@ namespace ThothRpc
             UnregisterBase(targetName);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result of the method call.</typeparam>
+        /// <typeparam name="TTarget">The type of the target object on the client side.</typeparam>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="expression">An expression representing the method to be called on the client side.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the result of the method call.</returns>
         public ValueTask<TResult> InvokeClientAsync<TResult, TTarget>(int clientId, Expression<Func<TTarget, TResult>> expression,
             CancellationToken cancellationToken = default)
         {
             return InvokeRemoteAsync(clientId, expression, cancellationToken);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <typeparam name="TTarget">The type of the target object on the client side.</typeparam>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="expression">An expression representing the method to be called on the client side.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         public ValueTask InvokeClientAsync<TTarget>(int clientId, Expression<Action<TTarget>> expression,
             CancellationToken cancellationToken = default)
         {
             return InvokeRemoteAsync(clientId, expression, cancellationToken);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result of the method call.</typeparam>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the result of the method call.</returns>
         public ValueTask<TResult> InvokeClientAsync<TResult>(int clientId, string targetClass, string method, params object[] parameters)
         {
             return InvokeRemoteAsync<TResult>(clientId, targetClass, method, default, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         public async ValueTask InvokeClientAsync(int clientId, string targetClass, string method, params object[] parameters)
         {
             await InvokeRemoteAsync(clientId, targetClass, method, null, default, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result of the method call.</typeparam>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the result of the method call.</returns>
         public ValueTask<TResult> InvokeClientAsync<TResult>(int clientId, string targetClass, string method, CancellationToken cancellationToken,
             params object[] parameters)
         {
             return InvokeRemoteAsync<TResult>(clientId, targetClass, method, cancellationToken, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on a client asynchronously.
+        /// </summary>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         public async ValueTask InvokeClientAsync(int clientId, string targetClass, string method, CancellationToken cancellationToken,
             params object[] parameters)
         {
             await InvokeRemoteAsync(clientId, targetClass, method, null, cancellationToken, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on a client, ignoring the result and any exceptions that may occur.
+        /// </summary>
+        /// <param name="deliveryMode">The delivery mode to use when invoking the method.</param>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
         public void InvokeForgetClient(DeliveryMode deliveryMode, int clientId, string targetClass,
             string method, params object?[] parameters)
         {
             InvokeForgetRemote(deliveryMode, clientId, targetClass, method, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on all clients, ignoring the result and any exceptions that may occur.
+        /// </summary>
+        /// <param name="deliveryMode">The delivery mode to use when invoking the method.</param>
+        /// <param name="targetClass">The target class on the client side to invoke the method on.</param>
+        /// <param name="method">The method to be called on the client side.</param>
+        /// <param name="parameters">The parameters to pass to the method on the client side.</param>
         public void InvokeForgetAllClients(DeliveryMode deliveryMode, string targetClass,
             string method, params object?[] parameters)
         {
             InvokeForgetRemote(deliveryMode, null, targetClass, method, parameters);
         }
 
+        /// <summary>
+        /// Invokes a method on a client, ignoring the result and any exceptions that may occur.
+        /// </summary>
+        /// <param name="deliveryMode">The delivery mode to use when invoking the method.</param>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="expression">An expression that represents the method to be called on the client side.</param>
         public void InvokeForgetClient<TTarget>(DeliveryMode deliveryMode, int clientId, Expression<Action<TTarget>> expression)
         {
             InvokeForgetRemote(deliveryMode, clientId, expression);
         }
 
+        /// <summary>
+        /// Invokes a method on all clients, ignoring the result and any exceptions that may occur.
+        /// </summary>
+        /// <param name="deliveryMode">The delivery mode to use when invoking the method.</param>
+        /// <param name="expression">An expression that represents the method to be called on the client side.</param>
         public void InvokeForgetAllClients<TTarget>(DeliveryMode deliveryMode, Expression<Action<TTarget>> expression)
         {
             InvokeForgetRemote(deliveryMode, null, expression);

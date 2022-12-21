@@ -40,7 +40,7 @@ namespace ThothChatRoomExample
             _hub.Register(this);
         }
 
-        public async void DisplayUserNames()
+        public async Task DisplayUserNames()
         {
             var usernames = await _hub.InvokeServerAsync<ChatServerService, IEnumerable<string>>
                 (s => s.GetUsernames());

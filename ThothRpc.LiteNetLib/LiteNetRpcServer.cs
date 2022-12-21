@@ -35,15 +35,15 @@ namespace ThothRpc.LiteNetLib
             _manager.Start(port);
         }
 
-        protected override void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
+        protected override async void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
         {
-            if (peerInfo != null)
+            if (peerInfo != null && _delegator != null)
             {
-                _delegator?.OnDataReceivedAsync(peerInfo, data);
+                await _delegator.OnDataReceivedAsync(peerInfo, data);
             }
             else
             {
-                throw new Exception("Server expects peerInfo to be specified.");
+                throw new InvalidOperationException("Server expects peerInfo and _delegator to be specified.");
             }
         }
 
