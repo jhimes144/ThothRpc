@@ -42,14 +42,21 @@ public interface IServerService
 ```
 #### Server
 ``` csharp
+// hubs are thread-safe and can be single instanced for your entire app,
+// or you can have multiple instances - its up to you
 var hub = ServerHubBuilder.BuildServer()
     .UseTransport<LiteNetRpcServer>()
     .UseMessagePack() // any object that is serializable by MessagePack can be used in parameters or return values
     .Build();
 
 var serverService = new ServerService(hub);
+
+// register methods can be called multiple times to register multiple services to the same hub
 hub.RegisterAs<IServerService>(serverService);
 hub.Listen(9050, "SomeConnectionKey");
+
+// Thread.Sleep(60000);
+// hub.Dispose(); // closes the connection
 
 public class ServerService : IServerService
 {
