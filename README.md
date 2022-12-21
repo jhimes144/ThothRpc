@@ -61,6 +61,7 @@ public class ServerService : IServerService
 
         Task.Run(async () =>
         {
+            // print the current time to all clients every second
             while (true)
             {
                 var now = DateTime.Now;
