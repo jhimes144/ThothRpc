@@ -4,38 +4,6 @@ ThothRpc is a drop-in, holistic, lightweight, full duplex and bidirectional RPC 
 
 Of course, it wouldn’t be simple if these layers were not included for you. This library comes with a reliable-and-ordered UDP transport layer built off of [LiteNetLib](https://github.com/RevenantX/LiteNetLib) and a serialization layer built off of speedy [Message Pack](https://github.com/neuecc/MessagePack-CSharp) with a secure http/2 web based transport solution on the road map.
 
-## Use Cases
-Thoth (in its current state) is great for…
-* Game multiplayer networking
-* Ultra-fast reliable bi-directional microservice communication within a secured VPC
-* LAN/VPN based apps and tools
-
-Note: Currently encrypted secured traffic is not yet a feature but will be present in the upcoming http/2 transport. However, implementing your own encryption system is easy with the ingress and egress callbacks.
-
-## Features
-
-* Runtime based
-  * No contract files (.proto, ect)
-  * Dynamic endpoint registration/unregistration
-* Performant
-  * Low GC pressure design
-  * Low CPU Usage
-  * Small packet size (down to 3 bytes total for an optimized fire and forget call)
-* Various calling conventions
-  * Typed or typeless invocation
-  * In-process direct method calls when client and server are on the same machine
-  * Fast fire-and-forget calling server or client with customizable delivery mode
-  * Reliable RPC bi-directional request-response calling
-* Request handling customization for server and client separately
-  * Manual handling allowing all incoming requests to be polled on a thread (i.e game-loop)
-  * Multi-threaded thread pool handling of all incoming requests (like asp.net core)
-* Holistic and modular
-  * Configurable transport and serialization
-  * Configurable data ingress and egress
-  * No-dependency logging (works with whatever you have, just use the callbacks)
-  * No middleware tie-ins, required dependency injection configuration, or complicated boilerplate code
-
-
 ## Usage Examples
 
 ### Typed Rpc
@@ -43,7 +11,7 @@ Note: Currently encrypted secured traffic is not yet a feature but will be prese
 ``` csharp
 public interface IClientService
 {
-    [ThothMethod]
+    [ThothMethod] // indicates that this method is callable from server
     void PrintServerTime(DateTime time);
 
     Task GetHelloWorld();
@@ -51,7 +19,7 @@ public interface IClientService
 
 public interface IServerService
 {
-    [ThothMethod]
+    [ThothMethod] // indicates that this method is callable from client
     string GetHelloWorld();
 }
 ```
@@ -205,3 +173,34 @@ public class ClientService
     }
 }
 ```
+
+## Use Cases
+Thoth (in its current state) is great for…
+* Game multiplayer networking
+* Ultra-fast reliable bi-directional microservice communication within a secured VPC
+* LAN/VPN based apps and tools
+
+Note: Currently encrypted secured traffic is not yet a feature but will be present in the upcoming http/2 transport. However, implementing your own encryption system is easy with the ingress and egress callbacks.
+
+## Features
+
+* Runtime based
+  * No contract files (.proto, ect)
+  * Dynamic endpoint registration/unregistration
+* Performant
+  * Low GC pressure design
+  * Low CPU Usage
+  * Small packet size (down to 3 bytes total for an optimized fire and forget call)
+* Various calling conventions
+  * Typed or typeless invocation
+  * In-process direct method calls when client and server are on the same machine
+  * Fast fire-and-forget calling server or client with customizable delivery mode
+  * Reliable RPC bi-directional request-response calling
+* Request handling customization for server and client separately
+  * Manual handling allowing all incoming requests to be polled on a thread (i.e game-loop)
+  * Multi-threaded thread pool handling of all incoming requests (like asp.net core)
+* Holistic and modular
+  * Configurable transport and serialization
+  * Configurable data ingress and egress
+  * No-dependency logging (works with whatever you have, just use the callbacks)
+  * No middleware tie-ins, required dependency injection configuration, or complicated boilerplate code
