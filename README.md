@@ -28,7 +28,7 @@ Note: Currently encrypted secured traffic is not yet a feature but will be prese
   * Reliable RPC bi-directional request-response calling
 * Request handling customization for server and client separately
   * Manual handling allowing all incoming requests to be polled on a thread (i.e game-loop)
-  * Mulit-threaded thread pool handling of all incoming requests (like asp.net core)
+  * Multi-threaded thread pool handling of all incoming requests (like asp.net core)
 * Holistic and modular
   * Configurable transport and serialization
   * Configurable data ingress and egress
