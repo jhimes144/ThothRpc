@@ -4,7 +4,24 @@ ThothRpc is a drop-in, holistic, lightweight, full duplex and bidirectional RPC 
 
 Of course, it wouldn’t be simple if these layers were not included for you. This library comes with a reliable-and-ordered UDP transport layer built off of [LiteNetLib](https://github.com/RevenantX/LiteNetLib) and a serialization layer built off of speedy [Message Pack](https://github.com/neuecc/MessagePack-CSharp) with a secure http/2 web based transport solution on the road map.
 
+## Build
+### [NuGet](https://www.nuget.org/packages/ThothRpc/) [![NuGet](https://img.shields.io/nuget/v/ThothRpc?color=blue)](https://www.nuget.org/packages/ThothRpc/)
+
 ## Usage Examples
+
+To use the following sample code, you need these 3 nuget packages.
+
+```
+dotnet add package ThothRpc
+dotnet add package ThothRpc.LiteNetLib
+dotnet add package ThothRpc.MessagePack
+```
+--or--
+```
+Install-Package ThothRpc
+Install-Package ThothRpc.LiteNetLib
+Install-Package ThothRpc.MessagePack
+```
 
 ### Typed Rpc
 #### Shared Code
