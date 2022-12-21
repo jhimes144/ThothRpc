@@ -47,6 +47,8 @@ public class ServerService : IServerService
             while (true)
             {
                 var now = DateTime.Now;
+                
+                // Fire and forget
                 _hub.InvokeForgetAllClients<IClientService>(DeliveryMode.Sequenced,
                     c => c.PrintServerTime(now));
 
@@ -85,6 +87,7 @@ public class ClientService : IClientService
 
     public async Task GetHelloWorld()
     {
+        // Method invocations not using fire-and-forget with a udp transport are always delivered reliable and ordered.
         var helloWorld = await _hub.InvokeServerAsync<IServerService, string>
             (s => s.GetHelloWorld());
 
