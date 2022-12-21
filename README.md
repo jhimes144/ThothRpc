@@ -181,12 +181,6 @@ hub.Register(clientService, "ClientService");
 await hub.ConnectAsync("localhost", 9050, "SomeConnectionKey");
 await clientService.GetHelloWorld();
 
-var clientService = new ClientService(hub);
-hub.RegisterAs<IClientService>(clientService);
-
-await hub.ConnectAsync("localhost", 9050, "SomeConnectionKey");
-await clientService.GetHelloWorld();
-
 public class ClientService
 {
     readonly ClientHub _hub;
