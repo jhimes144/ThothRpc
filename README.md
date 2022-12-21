@@ -27,7 +27,7 @@ public interface IServerService
 ``` csharp
 var hub = ServerHubBuilder.BuildServer()
     .UseTransport<LiteNetRpcServer>()
-    .UseMessagePack()
+    .UseMessagePack() // any object that is serializable by MessagePack can be used in parameters or return values
     .Build();
 
 var serverService = new ServerService(hub);
