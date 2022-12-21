@@ -33,7 +33,7 @@ namespace ThothChatRoomExample
             else
             {
                 _hub = builder
-                    .WithLocalServer(localServer)
+                    .UseLocalServer(localServer)
                     .Build();
             }
 
@@ -43,7 +43,7 @@ namespace ThothChatRoomExample
         public async void DisplayUserNames()
         {
             var usernames = await _hub.InvokeServerAsync<ChatServerService, IEnumerable<string>>
-                (s => s.GetUsernames()); // in a real app we would use the async / await pattern.
+                (s => s.GetUsernames());
 
             AnsiConsole.WriteLine();
             AnsiConsole.WriteLine("Users in this chatroom:");

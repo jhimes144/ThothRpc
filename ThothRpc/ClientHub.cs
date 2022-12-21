@@ -10,6 +10,7 @@ using ThothRpc.Base;
 using ThothRpc.Models;
 using ThothRpc.Models.Dto;
 using ThothRpc.Utility;
+using ThothRpc.Attributes;
 
 namespace ThothRpc
 {
@@ -20,9 +21,21 @@ namespace ThothRpc
     {
         readonly IClient _client;
 
+        /// <summary>
+        /// Event that is raised when the client is connected to a server.
+        /// </summary>
         public event EventHandler? Connected;
+
+        /// <summary>
+        /// Event that is raised when the client is disconnected from the server.
+        /// </summary>
         public event EventHandler? Disconnected;
 
+        /// <summary>
+        /// Initializes a new instance of the ClientHub class with the specified client and configuration.
+        /// </summary>
+        /// <param name="client">The IClient instance to use for communication with the server.</param>
+        /// <param name="config">The IHubConfiguration instance to use for configuring the hub.</param>
         public ClientHub(IClient client, IHubConfiguration config) 
             : base(true, config)
         {
@@ -35,6 +48,12 @@ namespace ThothRpc
             );
         }
 
+        /// <summary>
+        /// Initializes a new instance of the ClientHub class with the specified server hub and configuration.
+        /// This allows the client to communicate with a locally hosted server hub.
+        /// </summary>
+        /// <param name="localServer">The ServerHub instance to use as the local server.</param>
+        /// <param name="config">The IHubConfiguration instance to use for configuring the hub.</param>
         public ClientHub(ServerHub localServer, IHubConfiguration config)
             : base(true, config)
         {
@@ -47,17 +66,26 @@ namespace ThothRpc
         /// This will process all pending requests on the current thread.
         /// Note that requestHandlingStrategy should be Manual if this method is going to be used.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown if this method is called when the client is attached to a local server.</exception>
         public void ProcessRequests()
         {
             if (_client == null)
             {
                 throw new InvalidOperationException
-                    ("This method is unallowed when connected to a local server.");
+                    ("This method is unallowed when attached to a local server.");
             }
 
             _client.ProcessRequests();
         }
 
+        /// <summary>
+        /// Asynchronously connects the client to a server at the specified address and port, using the provided connection key.
+        /// </summary>
+        /// <param name="address">The address of the server to connect to.</param>
+        /// <param name="port">The port of the server to connect to.</param>
+        /// <param name="connectionKey">The connection key to use for authentication with the server.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if this method is called when the client is attached to a local server.</exception>
         public ValueTask ConnectAsync(string address, int port, string connectionKey)
         {
             if (_client == null)
@@ -71,13 +99,36 @@ namespace ThothRpc
 
         /// <summary>
         /// Registers an object instance with the client hub. This allows the instance to be called from the server.
+        /// All public methods decorated with the <see cref="ThothMethodAttribute"/> will be used unless methodNames
+        /// is specified, in which case method names provided will be used.
         /// </summary>
         /// <param name="instance">The instance to use.</param>
         /// <param name="targetName">(Optional) - Defaults to instance type name.</param>
+        /// <param name="methodNames">If specified, methods listed will be marked as accessible by peers.</param>
         /// <exception cref="InvalidOperationException">Thrown if the target has already been registered under the specified name.</exception>
-        public void Register(object instance, string? targetName = null)
+        public void Register(object instance, string? targetName = null, IEnumerable<string>? methodNames = null)
         {
-            RegisterBase(instance, targetName);
+            RegisterBase(instance, targetName, methodNames);
+        }
+
+        /// <summary>
+        /// <para>
+        /// Registers an object instance with the client hub. This allows the instance to be called from the server.
+        /// All public methods decorated with the <see cref="ThothMethodAttribute"/> will be used unless methodNames
+        /// is specified, in which case method names provided will be used.
+        /// </para>
+        /// <para>
+        /// The difference between this method and <see cref="Register(object, string?, IEnumerable{string}?)"/>
+        /// is that this method will register the target name under <typeparamref name="T"/> type full name as oppose to
+        /// GetType() directly on the instance.
+        /// </para>
+        /// </summary>
+        /// <param name="methodNames">If specified, methods listed will be marked as accessible by peers.</param>
+        /// <typeparam name="T">The type to register target name under</typeparam>
+        /// <param name="instance">he instance to use.</param>
+        public void RegisterAs<T>(T instance, IEnumerable<string>? methodNames = null) where T : notnull
+        {
+            RegisterBase(instance, typeof(T).FullName, methodNames);
         }
 
         /// <summary>
@@ -88,12 +139,6 @@ namespace ThothRpc
         public void Unregister(string targetName)
         {
             UnregisterBase(targetName);
-        }
-
-        public void Unregister(object instance)
-        {
-            Guard.AgainstNull(nameof(instance), instance);
-            UnregisterBase(instance.GetType().FullName!);
         }
 
         /// <summary>

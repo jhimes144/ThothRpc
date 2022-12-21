@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -83,10 +84,24 @@ namespace ThothRpc.Utility
                             .GetProperty("Result")?.GetValue(task);
                     }
                 }
+                else if (typeof(ValueTask).IsAssignableFrom(method.ReturnType)
+                        && result is ValueTask valueTask)
+                {
+                    await valueTask.ConfigureAwait(false);
+                    return null;
+                }
                 else
                 {
                     return result;
                 }
+            }
+            catch (InvalidCallException e)
+            {
+                throw e;
+            }
+            catch (CallFailedException e)
+            {
+                throw e;
             }
             catch (TargetException e)
             {
@@ -100,7 +115,7 @@ namespace ThothRpc.Utility
             {
                 throw new InvalidCallException(e.Message, e);
             }
-            catch(TargetInvocationException e)
+            catch (TargetInvocationException e)
             {
                 throw new CallFailedException(e.InnerException?.Message ?? "Unknown exception occurred..");
             }

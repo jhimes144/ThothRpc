@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,7 +57,7 @@ namespace ThothRpc.Base
                 a.TimeoutCancelSrc.Dispose();
                 a.TimeoutCancelSrc = new CancellationTokenSource();
 #endif
-            }, 3000);
+            }, 1000);
 
         readonly bool _swallowExceptions;
         readonly bool _genericErrorMessages;
@@ -87,12 +88,15 @@ namespace ThothRpc.Base
         /// </summary>
         public IHubConfiguration Config { get; }
 
+        volatile bool _disposed;
+
         protected Hub(bool isClient, IHubConfiguration config) 
         {
             Guard.AgainstNull(nameof(config), config);
             Config = config;
 
             _swallowExceptions = config.SwallowExceptions;
+            _genericErrorMessages = config.GenericErrorMessages;
             _isClient = isClient;
 
             _objectSerializer = config.ObjectSerializer;
@@ -127,6 +131,9 @@ namespace ThothRpc.Base
         /// <param name="client">Client to attach</param>
         internal static void AttachLocalHubs(ServerHub server, ClientHub client)
         {
+            server.checkThrowDisposed();
+            client.checkThrowDisposed();
+
             server._localHubLock.EnterWriteLock();
             client._localHubLock.EnterWriteLock();
 
@@ -137,37 +144,79 @@ namespace ThothRpc.Base
             client._localHubLock.ExitWriteLock();
         }
 
-        protected void RegisterBase(object instance, string? targetName = null)
+        protected void RegisterBase(object instance, string? targetName = null, IEnumerable<string>? methodNames = null)
         {
+            checkThrowDisposed();
             Guard.AgainstNull(nameof(instance), instance);
             targetName ??= instance.GetType().FullName;
             Guard.AgainstNullOrWhiteSpaceString(targetName, nameof(targetName));
 
             _targetsLock.EnterWriteLock();
 
-            if (_targetsByName.ContainsKey(targetName))
+            try
             {
-                throw new InvalidOperationException($"A target with name ${targetName} has already been registered.");
+                if (_targetsByName.ContainsKey(targetName!))
+                {
+                    throw new InvalidOperationException($"A target with name ${targetName} has already been registered.");
+                }
+
+                var registration = new TargetRegistration
+                {
+                    Instance = instance
+                };
+
+                if (methodNames == null)
+                {
+                    registration.Methods = ReflectionHelper.GetThothMethods(instance.GetType())
+                        .ToList();
+                }
+                else
+                {
+                    var methodNamesL = methodNames.ToList();
+                    var methods = instance.GetType().GetMethods();
+
+                    foreach (var methodName in methodNamesL)
+                    {
+                        var method = methods.FirstOrDefault(m => m.Name == methodName);
+
+                        if (method == null)
+                        {
+                            throw new InvalidOperationException
+                                ($"Cannot find public method {methodName} in ${instance.GetType().FullName}");
+                        }
+
+                        registration.Methods.Add(method);
+                    }
+                }
+
+                if (registration.Methods.Select(m => m.Name).Distinct().Count()
+                    != registration.Methods.Select(m => m.Name).Count())
+                {
+                    throw new NotSupportedException("Overloaded methods are not supported.");
+                }
+
+                _targetsByName.Add(targetName!, registration);
             }
-
-            _targetsByName.Add(targetName, new TargetRegistration
+            catch (Exception)
             {
-                Instance = instance,
-                Methods = ReflectionHelper.GetThothMethods(instance.GetType())
-                    .ToList()
-            });
-
-            _targetsLock.ExitWriteLock();
+                throw;
+            }
+            finally
+            {
+                _targetsLock.ExitWriteLock();
+            }
         }
 
         protected void UnregisterBase(string targetName) 
         {
+            checkThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetName, nameof(targetName));
 
             _targetsLock.EnterWriteLock();
 
             if (!_targetsByName.ContainsKey(targetName))
             {
+                _targetsLock.ExitWriteLock();
                 throw new InvalidOperationException($"Target ${targetName} was never registered.");
             }
 
@@ -178,6 +227,7 @@ namespace ThothRpc.Base
         protected ValueTask<TResult> InvokeRemoteAsync<TResult, TTarget>(int? clientId,
             Expression<Func<TTarget, TResult>> expression, CancellationToken cancellationToken = default)
         {
+            checkThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             return InvokeRemoteAsync<TResult>(clientId, typeof(TTarget).FullName!,
@@ -187,6 +237,7 @@ namespace ThothRpc.Base
         protected async ValueTask InvokeRemoteAsync<TTarget>(int? clientId,
             Expression<Action<TTarget>> expression, CancellationToken cancellationToken = default)
         {
+            checkThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             await InvokeRemoteAsync<object>(clientId, typeof(TTarget).FullName!,
@@ -197,6 +248,7 @@ namespace ThothRpc.Base
             (int? clientId, string targetClass, string method,
             CancellationToken cancellationToken, params object?[] parameters)
         {
+            checkThrowDisposed();
             var result = await InvokeRemoteAsync(clientId, targetClass, method,
                 typeof(TResult), cancellationToken, parameters).ConfigureAwait(false);
 
@@ -226,6 +278,7 @@ namespace ThothRpc.Base
             CancellationToken cancellationToken,
             params object?[] parameters)
         {
+            checkThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
@@ -261,6 +314,7 @@ namespace ThothRpc.Base
                     if (_tcsByCallId.TryGetValue(callId, out var call))
                     {
                         tcs.SetException(exception);
+                        _tcsByCallId.Remove(callId);
                     }
                 }
             }
@@ -301,6 +355,7 @@ namespace ThothRpc.Base
         protected void InvokeForgetRemote<TTarget>(DeliveryMode deliveryMode, int? clientId,
             Expression<Action<TTarget>> expression)
         {
+            checkThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             InvokeForgetRemote(deliveryMode, clientId, typeof(TTarget).FullName!,
@@ -310,6 +365,7 @@ namespace ThothRpc.Base
         protected async void InvokeForgetRemote(DeliveryMode deliveryMode, int? clientId, string targetClass,
             string method, params object?[] parameters)
         {
+            checkThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
@@ -346,6 +402,8 @@ namespace ThothRpc.Base
 
         public virtual void Dispose()
         {
+            checkThrowDisposed();
+            _disposed = true;
             _targetsLock.Dispose();
             _localHubLock.Dispose();
         }
@@ -357,6 +415,7 @@ namespace ThothRpc.Base
         /// <returns></returns>
         public IPeerInfo? GetCurrentPeer()
         {
+            checkThrowDisposed();
             return _currentPeer;
         }
 
@@ -374,14 +433,12 @@ namespace ThothRpc.Base
             object? result = null;
             TargetRegistration? target = null;
 
-            _targetsLock.EnterReadLock();
-
             if (dto.ClassTarget != null)
             {
+                _targetsLock.EnterReadLock();
                 _targetsByName.TryGetValue(dto.ClassTarget, out target);
+                _targetsLock.ExitReadLock();
             }
-
-            _targetsLock.ExitReadLock();
 
             if (target != null)
             {
@@ -475,14 +532,14 @@ namespace ThothRpc.Base
             if (!clientId.HasValue || clientId == -1)
             {
                 _localHubLock.EnterReadLock();
+                var localHub = _localHub;
+                _localHubLock.ExitReadLock();
 
-                if (_localHub != null)
+                if (localHub != null)
                 {
-                    await _localHub.onObjectReceivedAsync(_localPeerInfo, dto).ConfigureAwait(false);
+                    await localHub.onObjectReceivedAsync(_localPeerInfo, dto).ConfigureAwait(false);
                     skipNetworkSend = clientId == -1 || _isClient;
                 }
-
-                _localHubLock.ExitReadLock();
             }
 
             if (!skipNetworkSend)
@@ -529,6 +586,14 @@ namespace ThothRpc.Base
                 {
                     Pools.Recycle(dto);
                 }
+            }
+        }
+
+        void checkThrowDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(GetType().Name);
             }
         }
 

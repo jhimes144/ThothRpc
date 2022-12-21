@@ -296,7 +296,8 @@ namespace ThothRpc.Base
                     default:
                         throw new NotSupportedException();
                 }
-
+                
+                // todo: Memory allocation here
                 var result = new byte[mStream.Position];
                 mStream.Position = 0;
                 mStream.Read(result, 0, result.Length);

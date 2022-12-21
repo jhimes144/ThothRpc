@@ -21,8 +21,22 @@ namespace ThothRpc.Utility
 
         public static IEnumerable<MethodInfo> GetThothMethods(Type type)
         {
-            return type.GetMethods()
-                .Where(m => m.GetCustomAttribute<ThothMethodAttribute>() != null);
+            var methods = new List<MethodInfo>();
+
+            methods.AddRange(type.GetMethods()
+                .Where(m => m.GetCustomAttribute<ThothMethodAttribute>() != null));
+
+            foreach (var @interface in type.GetInterfaces())
+            {
+                methods.AddRange(GetThothMethods(@interface));
+            }
+
+            if (type.BaseType != null)
+            {
+                methods.AddRange(GetThothMethods(type.BaseType));
+            }
+
+            return methods;
         }
 
         /// <summary>

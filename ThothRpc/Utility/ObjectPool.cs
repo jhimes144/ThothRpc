@@ -69,7 +69,7 @@ namespace ThothRpc.Utility
         /// </summary>
         public Action<T>? Restock { get; }
 
-        public ObjectPool(Func<T> factory, Action<T>? restock = null, int maxPoolSize = 100000)
+        public ObjectPool(Func<T> factory, Action<T>? restock = null, int maxPoolSize = 3000)
         {
             _maxPoolSize = maxPoolSize;
             Factory = factory;

@@ -50,7 +50,7 @@ namespace ThothRpc
                     "the UseTransport method. You may need to create the client manually.");
             }
 
-            Transport = (TransportT)Activator.CreateInstance(typeof(TransportT));
+            Transport = (TransportT)Activator.CreateInstance(typeof(TransportT))!;
             return this;
         }
 
@@ -82,7 +82,7 @@ namespace ThothRpc
         /// </summary>
         /// <param name="server">The local server to use for the <see cref="ClientHub"/>.</param>
         /// <returns>The current instance of <see cref="ClientHubBuilder"/>.</returns>
-        public ClientHubBuilder WithLocalServer(ServerHub server)
+        public ClientHubBuilder UseLocalServer(ServerHub server)
         {
             LocalServer = server;
             return this;
@@ -159,7 +159,7 @@ namespace ThothRpc
                     "the UseTransport method. You may need to create the server manually.");
             }
 
-            Transport = (TransportT)Activator.CreateInstance(typeof(TransportT));
+            Transport = (TransportT)Activator.CreateInstance(typeof(TransportT))!;
             return this;
         }
 
