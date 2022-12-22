@@ -126,6 +126,7 @@ public class ClientService : IClientService
 }
 ```
 ### Typeless Rpc
+The code below is the same as above, but this time without any strong typing.
 #### Server
 ``` csharp
 var hub = ServerHubBuilder.BuildServer()
