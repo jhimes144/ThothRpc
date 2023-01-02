@@ -4,7 +4,24 @@ ThothRpc is a drop-in, holistic, lightweight, full duplex and bidirectional RPC 
 
 Of course, it wouldn’t be simple if these layers were not included for you. This library comes with a reliable-and-ordered UDP transport layer built off of [LiteNetLib](https://github.com/RevenantX/LiteNetLib) and a serialization layer built off of speedy [Message Pack](https://github.com/neuecc/MessagePack-CSharp) with a secure http/2 web based transport solution on the road map.
 
+## Build
+### [NuGet](https://www.nuget.org/packages/ThothRpc/) [![NuGet](https://img.shields.io/nuget/v/ThothRpc?color=blue)](https://www.nuget.org/packages/ThothRpc/)
+
 ## Usage Examples
+
+To use the following sample code, you need these 3 nuget packages.
+
+```
+dotnet add package ThothRpc
+dotnet add package ThothRpc.LiteNetLib
+dotnet add package ThothRpc.MessagePack
+```
+--or--
+```
+Install-Package ThothRpc
+Install-Package ThothRpc.LiteNetLib
+Install-Package ThothRpc.MessagePack
+```
 
 ### Typed Rpc
 #### Shared Code
@@ -25,14 +42,21 @@ public interface IServerService
 ```
 #### Server
 ``` csharp
+// hubs are thread-safe and can be single instanced for your entire app,
+// or you can have multiple instances - its up to you
 var hub = ServerHubBuilder.BuildServer()
     .UseTransport<LiteNetRpcServer>()
     .UseMessagePack() // any object that is serializable by MessagePack can be used in parameters or return values
     .Build();
 
 var serverService = new ServerService(hub);
+
+// register methods can be called multiple times to register multiple services to the same hub
 hub.RegisterAs<IServerService>(serverService);
 hub.Listen(9050, "SomeConnectionKey");
+
+// Thread.Sleep(60000);
+// hub.Dispose(); // closes the connection
 
 public class ServerService : IServerService
 {
@@ -44,6 +68,7 @@ public class ServerService : IServerService
 
         Task.Run(async () =>
         {
+            // print the current time to all clients every second
             while (true)
             {
                 var now = DateTime.Now;
@@ -101,6 +126,7 @@ public class ClientService : IClientService
 }
 ```
 ### Typeless Rpc
+The code below is the same as above, but this time without any strong typing.
 #### Server
 ``` csharp
 var hub = ServerHubBuilder.BuildServer()
