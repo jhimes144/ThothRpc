@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +22,8 @@ namespace ThothRpc.Utility
             = new ConditionalWeakTable<MethodInfo, Type[]>();
 
         public static async ValueTask<object?> InvokeMethodAsync(TargetRegistration target,
-            string methodName, IReadOnlyList<ReadOnlyMemory<byte>> parameterData, DeserializeObject objectDeserializer)
+            string methodName, IReadOnlyList<ReadOnlyMemory<byte>> parameterData,
+            DeserializeObject objectDeserializer)
         {
             var method = target.Methods
                 .FirstOrDefault(m => m.Name == methodName);

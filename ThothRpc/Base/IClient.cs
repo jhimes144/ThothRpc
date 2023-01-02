@@ -8,9 +8,9 @@ namespace ThothRpc.Base
 {
     public interface IClient : IDisposable
     {
-        void Init(IClientDelegator delegator, bool multiThreaded);
+        void Init(IClientDelegator delegator, TimeSpan connectingTimeout, bool multiThreaded);
 
-        ValueTask ConnectAsync(string address, int port, string connectionKey);
+        Task ConnectAsync(string address, int port, string connectionKey);
         void SendData(DeliveryMode deliveryMode, byte[] data);
         void ProcessRequests();
     }

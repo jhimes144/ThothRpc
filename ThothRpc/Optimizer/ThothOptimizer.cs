@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ThothRpc.Attributes;
 using ThothRpc.Exceptions;
 using ThothRpc.Utility;
 
@@ -81,26 +82,58 @@ namespace ThothRpc.Optimizer
         /// <para>
         /// In order for optimization to work, the peer codebase MUST contain an identical number of Thoth decorated methods with identical names
         /// from types of an identical fully qualified name as the current codebase. 
-        /// In addition, the peer application must also call <see cref="Optimize(IEnumerable{Assembly}?)"/>.
+        /// In addition, the peer application must also call this method.
         /// This method is best called at app startup.
         /// </para>
         /// </summary>
         /// <param name="assemblies">The assemblies to search for Thoth methods.</param>
-        public void Optimize(IEnumerable<Assembly>? assemblies)
+        /// <param name="scanOnlyThothServices">If true, indicates that only types decorated if the <see cref="ThothServiceAttribute"/> will be scanned.
+        /// If you do set this to true, all your classes and interfaces that use <see cref="ThothMethodAttribute"/> must be decorated with
+        /// <see cref="ThothServiceAttribute"/>.</param>
+        public void Optimize(IEnumerable<Assembly>? assemblies, bool scanOnlyThothServices = true)
         {
-            _recordsLock.EnterWriteLock();
-
             if (assemblies == null)
             {
                 assemblies = AppDomain.CurrentDomain.GetAssemblies();
             }
 
-            var types = assemblies.SelectMany(a => a.GetTypes())
-                .OrderBy(t => t.FullName);
+            OptimizeTypes(assemblies.SelectMany(a => a.GetLoadableTypes()), scanOnlyThothServices);
+        }
 
+        /// <summary>
+        /// <para>
+        /// This method will generate an auto target/method map of all Thoth methods found in the given assemblies.
+        /// This will decrease the packet size of RPC calls.
+        /// </para>
+        /// <para>
+        /// In order for optimization to work, the peer MUST call this method with the same types containing
+        /// an identical number of Thoth decorated methods with identical names
+        /// from types of an identical fully qualified name as the current codebase.
+        /// This method is best called at app startup.
+        /// </para>
+        /// </summary>
+        /// <param name="types">The types to search for Thoth methods.</param>
+        /// <param name="scanOnlyThothServices">If true, indicates that only types decorated if the <see cref="ThothServiceAttribute"/> will be scanned.
+        /// If you do set this to true, all your classes and interfaces that use <see cref="ThothMethodAttribute"/> must be decorated with
+        /// <see cref="ThothServiceAttribute"/>. Setting this parameter to true will improve performance of this method call.</param>
+        public void OptimizeTypes(IEnumerable<Type> types, bool scanOnlyThothServices = true)
+        {
+            IOrderedEnumerable<Type> typesOrd;
+
+            if (scanOnlyThothServices)
+            {
+                typesOrd = types.Where(t => t.GetCustomAttribute<ThothServiceAttribute>() != null)
+                    .OrderBy(t => t.FullName);
+            }
+            else
+            {
+                typesOrd = types.OrderBy(t => t.FullName);
+            }
+
+            _recordsLock.EnterWriteLock();
             ushort cId = 1;
 
-            foreach (var type in types)
+            foreach (var type in typesOrd)
             {
                 var methods = ReflectionHelper
                     .GetThothMethods(type)

@@ -18,6 +18,11 @@ namespace ThothRpc
         TimeSpan RequestTimeout { get; }
 
         /// <summary>
+        /// The maximum amount of time spent attempting to connect to a server before the operation times out.
+        /// </summary>
+        TimeSpan ConnectingTimeout { get; }
+
+        /// <summary>
         /// Indicates whether or not the hub should suppress exceptions that are thrown during the execution of a request.
         /// </summary>
         bool SwallowExceptions { get; }

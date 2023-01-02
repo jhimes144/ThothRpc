@@ -13,14 +13,14 @@ namespace ThothRpc.Tests.TestHelpers
 
         public TestServer Server { get; set; }
 
-        public ValueTask ConnectAsync(string address, int port, string connectionKey)
+        public Task ConnectAsync(string address, int port, string connectionKey)
         {
             return default;
         }
 
         public void Dispose() { }
 
-        public void Init(IClientDelegator delegator, bool multiThreaded)
+        public void Init(IClientDelegator delegator, TimeSpan connectingTimeout, bool multiThreaded)
         {
             _clientDelegator = delegator;
         }

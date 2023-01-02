@@ -1,5 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<PackageTags>rpc udp network</PackageTags>
+		<PackageReleaseNotes>https://github.com/jhimes144/ThothRpc/releases</PackageReleaseNotes>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/jhimes144/ThothRpc</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/jhimes144/ThothRpc</PackageProjectUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Version>0.7.3</Version>
+		<Authors>Jacob Himes</Authors>
+		<Copyright>Copyright 2022 Jacob Himes</Copyright>
+		<Description>Drop-in, holistic, lightweight, full duplex, bidirectional RPC framework for .Net</Description>
+	</PropertyGroup>
   <PropertyGroup>
 	  <TargetFrameworks>net7.0;netstandard2.1;net6.0;netcoreapp3.1</TargetFrameworks>
 	  <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -8,8 +20,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+  	<None Include="..\README.md">
+  		<Pack>True</Pack>
+  		<PackagePath>\</PackagePath>
+  	</None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="LiteNetLib" Version="0.9.5.2" />
-    <PackageReference Include="MessagePack" Version="2.4.59" />
   </ItemGroup>
 
   <ItemGroup>

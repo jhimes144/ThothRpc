@@ -1,29 +1,90 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ThothRpc.Base;
+using ThothRpc.Utility;
 
 namespace ThothRpc.LiteNetLib
 {
     public class LiteNetRpcClient : LiteNetRpcManager, IClient
     {
         IClientDelegator? _delegator;
+        readonly object _connectionStateLock = new object();
+
+        TaskCompletionSource<bool> _connectionCompletionSource;
+        CancellationTokenSource _connectionTimeoutCancelSrc;
+        ConnectionState _connectionState;
+        TimeSpan _connectingTimeout = TimeSpan.FromSeconds(5);
+
+        public ConnectionState ConnectionState
+        {
+            get
+            {
+                lock (_connectionStateLock)
+                {
+                    return _connectionState;
+                }
+            }
+            set
+            {
+                lock (_connectionStateLock)
+                {
+                    _connectionState = value;
+                }
+            }
+        }
 
         public LiteNetRpcClient() : base(true) { }
 
-        public void Init(IClientDelegator delegator, bool multiThreaded)
+        public void Init(IClientDelegator delegator, TimeSpan connectingTimeout, bool multiThreaded)
         {
             _delegator = delegator;
+            _connectingTimeout = connectingTimeout;
             Init(multiThreaded);
         }
 
-        public ValueTask ConnectAsync(string address, int port, string connectionKey)
+        public async Task ConnectAsync(string address, int port, string connectionKey)
         {
-            _manager.Start();
-            _manager.Connect(address, port, connectionKey);
-            return default;
+            lock (_connectionStateLock)
+            {
+                if (_connectionState != ConnectionState.Disconnected)
+                {
+                    throw new InvalidOperationException("A connection is either already made or in progress.");
+                }
+
+                _connectionState = ConnectionState.Connecting;
+                _connectionCompletionSource = new TaskCompletionSource<bool>();
+                _connectionTimeoutCancelSrc?.Dispose();
+                _connectionTimeoutCancelSrc = new CancellationTokenSource();
+
+                _connectionTimeoutCancelSrc.Token.Register(() =>
+                {
+                    lock (_connectionStateLock)
+                    {
+                        if (_connectionState == ConnectionState.Connecting)
+                        {
+                            _connectionCompletionSource.TrySetException(new TimeoutException("Connection attempt timed-out."));
+                        }
+
+                        _connectionState = ConnectionState.Disconnected;
+                    }
+                });
+
+                _connectionTimeoutCancelSrc.CancelAfter(_connectingTimeout);
+            }
+
+            await Task.Run(() =>
+            {
+                _manager.Stop();
+                _manager.Start();
+                _manager.Connect(address, port, connectionKey);
+            });
+
+            await _connectionCompletionSource.Task;
         }
 
         public void SendData(DeliveryMode deliveryMode, byte[] data)
@@ -36,7 +97,7 @@ namespace ThothRpc.LiteNetLib
             _delegator = delegator;
         }
 
-        protected override async void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
+        protected override void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
         {
             if (_delegator != null)
             {
@@ -50,11 +111,26 @@ namespace ThothRpc.LiteNetLib
 
         protected override void OnPeerConnected(IPeerInfo peerInfo)
         {
+            lock (_connectionStateLock)
+            {
+                if (_connectionState == ConnectionState.Connecting)
+                {
+                    _connectionCompletionSource.SetResult(true);
+                }
+
+                _connectionState = ConnectionState.Connected;
+            }
+
             _delegator?.OnConnected();
         }
 
         protected override void OnPeerDisconnected(IPeerInfo peerInfo)
         {
+            lock (_connectionStateLock)
+            {
+                _connectionState = ConnectionState.Disconnected;
+            }
+
             _delegator?.OnDisconnected();
         }
     }

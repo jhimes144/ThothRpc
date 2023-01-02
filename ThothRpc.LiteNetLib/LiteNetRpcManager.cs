@@ -1,9 +1,10 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -38,6 +39,7 @@ namespace ThothRpc.LiteNetLib
         public LiteNetRpcManager(bool isClient)
         {
             _manager = new NetManager(_listener);
+            _manager.UpdateTime = 1;
             _isClient = isClient;
 
             _listener.NetworkReceiveEvent += onNetworkReceived;
@@ -72,6 +74,11 @@ namespace ThothRpc.LiteNetLib
 
         void onPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
         {
+            if (peer == null)
+            {
+                return;
+            }
+
             IPeerInfo? peerInfo = null;
 
             _clientsLock.EnterWriteLock();
@@ -92,6 +99,11 @@ namespace ThothRpc.LiteNetLib
 
         void onPeerConnected(NetPeer peer)
         {
+            if (peer == null)
+            {
+                return;
+            }
+
             _clientsLock.EnterWriteLock();
 
             var peerInfo = new PeerInfo
@@ -117,6 +129,7 @@ namespace ThothRpc.LiteNetLib
         {
             _manager.DisconnectAll();
             _clientsLock.Dispose();
+            _manager.Stop();
         }
 
         /// <inheritdoc/>
@@ -136,44 +149,54 @@ namespace ThothRpc.LiteNetLib
         {
             _clientsLock.EnterReadLock();
 
-            if (peerId.HasValue)
+            try
             {
-                if (!_peersById.TryGetValue(peerId.Value, out var peerInfo))
+                if (peerId.HasValue)
                 {
-                    throw new InvalidOperationException($"Peer by id {peerId} cannot be found.");
-                }
-
-                sendToPeer(peerInfo, deliveryMode, data);
-            }
-            else
-            {
-                if (_isClient)
-                {
-                    var peerInfo = _peersById.Values.FirstOrDefault();
-
-                    if (peerInfo == null)
+                    if (!_peersById.TryGetValue(peerId.Value, out var peerInfo))
                     {
-                        throw new InvalidOperationException("Not connected to server.");
+                        throw new InvalidOperationException($"Peer by id {peerId} cannot be found.");
                     }
 
                     sendToPeer(peerInfo, deliveryMode, data);
                 }
                 else
                 {
-                    foreach (var client in _peersById.Values)
+                    if (_isClient)
                     {
-                        sendToPeer(client, deliveryMode, data);
+                        var peerInfo = _peersById.Values.FirstOrDefault();
+
+                        if (peerInfo == null)
+                        {
+                            throw new InvalidOperationException("Not connected to server.");
+                        }
+
+                        sendToPeer(peerInfo, deliveryMode, data);
+                    }
+                    else
+                    {
+                        foreach (var client in _peersById.Values)
+                        {
+                            sendToPeer(client, deliveryMode, data);
+                        }
                     }
                 }
             }
-
-            _clientsLock.ExitReadLock();
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _clientsLock.ExitReadLock();
+            }
         }
 
         void sendToPeer(IPeerInfo client, DeliveryMode mode, byte[] data)
         {
             var peer = (NetPeer)client.UnderlyingConnection!;
             peer.Send(data, (DeliveryMethod)mode);
+            _manager.TriggerUpdate();
         }
 
         void onNetworkReceived(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)

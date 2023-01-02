@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http.Headers;
@@ -68,7 +70,6 @@ namespace ThothRpc.Base
             = new Dictionary<string, TargetRegistration>();
 
         readonly ReaderWriterLockSlim _targetsLock = new ReaderWriterLockSlim();
-
         readonly ReaderWriterLockSlim _localHubLock = new ReaderWriterLockSlim();
         Hub? _localHub;
 
@@ -335,7 +336,8 @@ namespace ThothRpc.Base
 
             try
             {
-                return await task.ConfigureAwait(false);
+                var result = await task.ConfigureAwait(false);
+                return result;
             }
             catch (Exception)
             {
@@ -411,7 +413,9 @@ namespace ThothRpc.Base
 
         /// <summary>
         /// Returns the current peer who called the method currently executing. 
-        /// This should only be called within a method decorated with <see cref="Attributes.ThothMethodAttribute"/>
+        /// This should only be called within a method decorated with <see cref="Attributes.ThothMethodAttribute"/>.
+        /// Its important to note that if a Thoth method is called locally (as in directly invoked not through ThothRpc), that
+        /// the peer returned will likely be peer info for a different call, and should not be used.
         /// </summary>
         /// <returns></returns>
         public IPeerInfo? GetCurrentPeer()
@@ -422,6 +426,7 @@ namespace ThothRpc.Base
 
         async ValueTask processMethodCallAsync(IPeerInfo? peer, MethodCallDto dto)
         {
+            //var sw = Stopwatch.StartNew();
             MethodResponseDto? responseDto = null;
 
             if (dto.CallId.HasValue)
@@ -484,6 +489,13 @@ namespace ThothRpc.Base
                 // this seems to be a bug in .net, the following sets ResultData to an empty memory span when null
                 //responseDto.ResultData = result == null ? null : _objectSerializer(result);
 
+                var doIt = false;
+
+                if (doIt)
+                {
+                    responseDto.ResultData = null;
+                }
+
                 await sendDtoAsync(DeliveryMode.ReliableOrdered, peer?.PeerId, responseDto).ConfigureAwait(false);
                 Pools.MethodResponseDtoPool.Recycle(responseDto);
             }
@@ -511,8 +523,8 @@ namespace ThothRpc.Base
                     }
                     else
                     {
-                        awaitingCall.TaskCompletionSource.SetResult
-                            (_objectDeserializer(awaitingCall.ReturnType ?? typeof(object), dto.ResultData.Value));
+                        var des = _objectDeserializer(awaitingCall.ReturnType ?? typeof(object), dto.ResultData.Value);
+                        awaitingCall.TaskCompletionSource.SetResult(des);
                     }
                 }
                 else
@@ -526,9 +538,6 @@ namespace ThothRpc.Base
         async ValueTask sendDtoAsync(DeliveryMode deliveryMode, int? clientId, IThothDto dto)
         {
             var skipNetworkSend = false;
-
-            // a null client id covers the case of a server sending to all clients
-            // and the case of a client making the call to the server
 
             if (!clientId.HasValue || clientId == -1)
             {
@@ -546,7 +555,6 @@ namespace ThothRpc.Base
             if (!skipNetworkSend)
             {
                 var data = _packetAnalyzer.SerializePacket(dto);
-                data = _dataEgressTransformer?.Invoke(data) ?? data;
                 SendData(deliveryMode, clientId, data);
             }
         }
@@ -602,8 +610,11 @@ namespace ThothRpc.Base
 
         private class AwaitingCall
         {
-            public ManualResetValueTaskSource<object?> TaskCompletionSource { get; } 
-                = new ManualResetValueTaskSource<object?>();
+            public ManualResetValueTaskSource<object?> TaskCompletionSource { get; }
+                = new ManualResetValueTaskSource<object?>()
+                {
+                    RunContinuationsAsynchronously = true
+                };
 
             public Type? ReturnType { get; set; }
 

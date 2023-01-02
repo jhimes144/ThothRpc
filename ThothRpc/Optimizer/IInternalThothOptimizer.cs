@@ -8,7 +8,7 @@ namespace ThothRpc.Optimizer
         bool IsOptimized { get; }
 
         void Optimize();
-        void Optimize(IEnumerable<Assembly>? assemblies);
+        void Optimize(IEnumerable<Assembly>? assemblies, bool scanOnlyThothServices = true);
         MethodTargetOptRec GetRecFromId(ushort id);
         ushort GetIdFromTargetMethod(string target, string method);
     }

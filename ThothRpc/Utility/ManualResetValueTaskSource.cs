@@ -7,7 +7,7 @@ using System.Threading.Tasks.Sources;
 
 namespace ThothRpc.Utility
 {
-    internal sealed class ManualResetValueTaskSource<T> : IValueTaskSource<T>, IValueTaskSource
+    public sealed class ManualResetValueTaskSource<T> : IValueTaskSource<T>, IValueTaskSource
     {
         private ManualResetValueTaskSourceCore<T> _logic; // mutable struct; do not make this readonly
 

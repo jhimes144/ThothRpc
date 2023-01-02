@@ -262,7 +262,7 @@ namespace ThothRpc
         }
 
         /// <summary>
-        /// Releases all resources used by <see cref="ServerHub"/>
+        /// Releases all resources used by <see cref="ServerHub"/>. Stops any listening and closes network sockets.
         /// </summary>
         public override void Dispose()
         {

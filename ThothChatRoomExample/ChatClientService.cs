@@ -28,7 +28,7 @@ namespace ThothChatRoomExample
                     .UseTransport<LiteNetRpcClient>()
                     .Build();
 
-                _hub.ConnectAsync(address, 9000, "ThothChatRoom").AsTask().Wait();
+                _hub.ConnectAsync(address, 9000, "ThothChatRoom").Wait();
             }
             else
             {

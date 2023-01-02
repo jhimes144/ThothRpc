@@ -44,6 +44,7 @@ namespace ThothRpc
 
             _client.Init(
                 delegator: this,
+                connectingTimeout : config.ConnectingTimeout,
                 multiThreaded: config.RequestHandlingStrategy == RequestHandlingStrategy.MultiThreaded
             );
         }
@@ -86,7 +87,7 @@ namespace ThothRpc
         /// <param name="connectionKey">The connection key to use for authentication with the server.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
         /// <exception cref="InvalidOperationException">Thrown if this method is called when the client is attached to a local server.</exception>
-        public ValueTask ConnectAsync(string address, int port, string connectionKey)
+        public Task ConnectAsync(string address, int port, string connectionKey)
         {
             if (_client == null)
             {
@@ -247,7 +248,7 @@ namespace ThothRpc
         }
 
         /// <summary>
-        /// Releases all resources used by <see cref="ClientHub"/>
+        /// Releases all resources used by <see cref="ClientHub"/>. Disconnects the client from server.
         /// </summary>
         public override void Dispose()
         {

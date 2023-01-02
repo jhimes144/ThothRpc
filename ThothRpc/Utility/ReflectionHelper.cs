@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -17,6 +18,25 @@ namespace ThothRpc.Utility
         public static (string methodName, object?[] arguments) EvaluateMethodCall<T>(Expression<Action<T>> expression)
         {
             return EvaluateMethodCall((LambdaExpression)expression);
+        }
+
+        public static IEnumerable<Type> GetLoadableTypes(this Assembly assembly)
+        {
+            // Algorithm from StackOverflow answer here:
+            // https://stackoverflow.com/questions/7889228/how-to-prevent-reflectiontypeloadexception-when-calling-assembly-gettypes
+            if (assembly == null)
+            {
+                throw new ArgumentNullException(nameof(assembly));
+            }
+
+            try
+            {
+                return assembly.DefinedTypes.Select(t => t.AsType());
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null)!;
+            }
         }
 
         public static IEnumerable<MethodInfo> GetThothMethods(Type type)
@@ -39,6 +59,9 @@ namespace ThothRpc.Utility
             return methods;
         }
 
+        [ThreadStatic]
+        static Stopwatch _sw;
+
         /// <summary>
         /// IMPORTANT: MethodCallData that is returned in a thread static field to save on GC
         /// and should not be used across threads, and used quickly
@@ -48,6 +71,15 @@ namespace ThothRpc.Utility
         /// <exception cref="Exception"></exception>
         public static (string MethodName, object?[] Arguments) EvaluateMethodCall(LambdaExpression expression)
         {
+            if (_sw == null)
+            {
+                _sw = Stopwatch.StartNew();
+            }
+            else
+            {
+                _sw.Restart();
+            }
+
             if (expression.Body is MethodCallExpression methodCall)
             {
                 var args = methodCall.Arguments;
@@ -68,6 +100,7 @@ namespace ThothRpc.Utility
                     i++;
                 }
 
+                Debug.WriteLine($"Parsing expression for the call took {_sw.ElapsedMilliseconds} ms");
                 return (methodCall.Method.Name, rArgs);
             }
             else
