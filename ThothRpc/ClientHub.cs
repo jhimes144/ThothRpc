@@ -224,6 +224,52 @@ namespace ThothRpc
         }
 
         /// <summary>
+        /// Invokes a server method and returns the result. 
+        /// </summary>
+        /// <typeparam name="TTarget">The type of the server class.</typeparam>
+        /// <typeparam name="TResult">The return type of the method.</typeparam>
+        /// <param name="expression">An expression that specifies the method to be called on the server.</param>
+        /// <returns>The return value of the method.</returns>
+        public TResult InvokeServer<TTarget, TResult>(Expression<Func<TTarget, TResult>> expression)
+        {
+            return InvokeRemote(null, expression);
+        }
+
+        /// <summary>
+        /// Invokes a server method.
+        /// </summary>
+        /// <typeparam name="TTarget">The type of the server class.</typeparam>
+        /// <param name="expression">An expression that specifies the method to be called on the server.</param>
+        public void InvokeServer<TTarget>(Expression<Action<TTarget>> expression)
+        {
+            InvokeRemote(null, expression);
+        }
+
+        /// <summary>
+        /// Invokes a server method and returns the result.
+        /// </summary>
+        /// <typeparam name="TResult">The return type of the method.</typeparam>
+        /// <param name="targetClass">The name of the server class.</param>
+        /// <param name="method">The name of the method to be called on the server.</param>
+        /// <param name="parameters">The parameters to be passed to the method.</param>
+        /// <returns>The return value of the method.</returns>
+        public TResult InvokeServer<TResult>(string targetClass, string method, params object[] parameters)
+        {
+            return InvokeRemote<TResult>(null, targetClass, method, parameters);
+        }
+
+        /// <summary>
+        /// Invokes a server method.
+        /// </summary>
+        /// <param name="targetClass">The name of the server class.</param>
+        /// <param name="method">The name of the method to be called on the server.</param>
+        /// <param name="parameters">The parameters to be passed to the method.</param>
+        public void InvokeServer(string targetClass, string method, params object[] parameters)
+        {
+            InvokeRemote(null, targetClass, method, null, parameters);
+        }
+
+        /// <summary>
         /// Invokes a server method without waiting for a response.
         /// </summary>
         /// <param name="deliveryMode">The delivery mode for the method call.</param>

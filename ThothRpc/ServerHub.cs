@@ -209,6 +209,56 @@ namespace ThothRpc
         }
 
         /// <summary>
+        /// Invokes a client method and returns the result. 
+        /// </summary>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <typeparam name="TTarget">The type of the client class.</typeparam>
+        /// <typeparam name="TResult">The return type of the method.</typeparam>
+        /// <param name="expression">An expression that specifies the method to be called on the client.</param>
+        /// <returns>The return value of the method.</returns>
+        public TResult InvokeClient<TTarget, TResult>(int clientId, Expression<Func<TTarget, TResult>> expression)
+        {
+            return InvokeRemote(clientId, expression);
+        }
+
+        /// <summary>
+        /// Invokes a client method.
+        /// </summary>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <typeparam name="TTarget">The type of the client class.</typeparam>
+        /// <param name="expression">An expression that specifies the method to be called on the client.</param>
+        public void InvokeClient<TTarget>(int clientId, Expression<Action<TTarget>> expression)
+        {
+            InvokeRemote(clientId, expression);
+        }
+
+        /// <summary>
+        /// Invokes a client method and returns the result.
+        /// </summary>
+        /// <typeparam name="TResult">The return type of the method.</typeparam>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The name of the client class.</param>
+        /// <param name="method">The name of the method to be called on the client.</param>
+        /// <param name="parameters">The parameters to be passed to the method.</param>
+        /// <returns>The return value of the method.</returns>
+        public TResult InvokeClient<TResult>(int clientId, string targetClass, string method, params object[] parameters)
+        {
+            return InvokeRemote<TResult>(clientId, targetClass, method, parameters);
+        }
+
+        /// <summary>
+        /// Invokes a client method.
+        /// </summary>
+        /// <param name="clientId">The id of the client to invoke the method on.</param>
+        /// <param name="targetClass">The name of the client class.</param>
+        /// <param name="method">The name of the method to be called on the client.</param>
+        /// <param name="parameters">The parameters to be passed to the method.</param>
+        public void InvokeClient(int clientId, string targetClass, string method, params object[] parameters)
+        {
+            InvokeRemote(clientId, targetClass, method, null, parameters);
+        }
+
+        /// <summary>
         /// Invokes a method on a client, ignoring the result and any exceptions that may occur.
         /// </summary>
         /// <param name="deliveryMode">The delivery mode to use when invoking the method.</param>

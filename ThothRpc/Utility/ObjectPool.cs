@@ -98,6 +98,10 @@ namespace ThothRpc.Utility
                 _bag.Add(obj);
                 Interlocked.Increment(ref _currentPoolSize);
             }
+            else if (obj is IDisposable disp)
+            {
+                disp.Dispose();
+            }
         }
     }
 }

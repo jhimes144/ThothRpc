@@ -59,9 +59,6 @@ namespace ThothRpc.Utility
             return methods;
         }
 
-        [ThreadStatic]
-        static Stopwatch _sw;
-
         /// <summary>
         /// IMPORTANT: MethodCallData that is returned in a thread static field to save on GC
         /// and should not be used across threads, and used quickly
@@ -71,15 +68,6 @@ namespace ThothRpc.Utility
         /// <exception cref="Exception"></exception>
         public static (string MethodName, object?[] Arguments) EvaluateMethodCall(LambdaExpression expression)
         {
-            if (_sw == null)
-            {
-                _sw = Stopwatch.StartNew();
-            }
-            else
-            {
-                _sw.Restart();
-            }
-
             if (expression.Body is MethodCallExpression methodCall)
             {
                 var args = methodCall.Arguments;
@@ -100,7 +88,6 @@ namespace ThothRpc.Utility
                     i++;
                 }
 
-                Debug.WriteLine($"Parsing expression for the call took {_sw.ElapsedMilliseconds} ms");
                 return (methodCall.Method.Name, rArgs);
             }
             else

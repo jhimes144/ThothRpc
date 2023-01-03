@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -49,6 +50,11 @@ namespace ThothRpc.Base
             {
                 a.TaskCompletionSource.Reset();
                 a.ReturnType = null;
+                a.SyncException = null;
+                a.SyncReturnData = null;
+
+                a.ResetEvent.Dispose();
+                a.ResetEvent = new ManualResetEventSlim(false);
 
 #if NET6_0_OR_GREATER
                 if (!a.TimeoutCancelSrc.TryReset())
@@ -60,7 +66,7 @@ namespace ThothRpc.Base
                 a.TimeoutCancelSrc.Dispose();
                 a.TimeoutCancelSrc = new CancellationTokenSource();
 #endif
-            }, 1000);
+            }, 30);
 
         readonly bool _swallowExceptions;
         readonly bool _genericErrorMessages;
@@ -73,7 +79,7 @@ namespace ThothRpc.Base
         readonly ReaderWriterLockSlim _localHubLock = new ReaderWriterLockSlim();
         Hub? _localHub;
 
-        readonly Dictionary<uint, AwaitingCall> _tcsByCallId
+        readonly Dictionary<uint, AwaitingCall> _awaitingCallByCallId
             = new Dictionary<uint, AwaitingCall>();
 
         readonly object _callStateLock = new object();
@@ -131,6 +137,7 @@ namespace ThothRpc.Base
         /// </summary>
         /// <param name="server">Server to attach</param>
         /// <param name="client">Client to attach</param>
+        [Obsolete]
         internal static void AttachLocalHubs(ServerHub server, ClientHub client)
         {
             server.checkThrowDisposed();
@@ -256,7 +263,7 @@ namespace ThothRpc.Base
 
             if (result == default)
             {
-                return default!; // this version of c# does not allow TResult?
+                return default!;
             }
             else
             {
@@ -272,12 +279,55 @@ namespace ThothRpc.Base
             }
         }
 
-        protected async ValueTask<object?> InvokeRemoteAsync(
-            int? clientId,
+        protected TResult InvokeRemote<TResult, TTarget>(int? clientId,
+            Expression<Func<TTarget, TResult>> expression)
+        {
+            checkThrowDisposed();
+            (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
+
+            return InvokeRemote<TResult>(clientId, typeof(TTarget).FullName!,
+                MethodName, Arguments);
+        }
+
+        protected void InvokeRemote<TTarget>(int? clientId,
+            Expression<Action<TTarget>> expression)
+        {
+            checkThrowDisposed();
+
+            (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
+            InvokeRemote<object>(clientId, typeof(TTarget).FullName!, MethodName, Arguments);
+        }
+
+        protected TResult InvokeRemote<TResult>
+            (int? clientId, string targetClass, string method, params object?[] parameters)
+        {
+            checkThrowDisposed();
+
+            var result = InvokeRemote(clientId, targetClass,
+                method, typeof(TResult), parameters);
+
+            if (result == default)
+            {
+                return default!;
+            }
+            else
+            {
+                try
+                {
+                    return (TResult)result;
+                }
+                catch (InvalidCastException e)
+                {
+                    throw new InvalidCallException($"Return type mismatch. Cannot convert " +
+                        $"{result.GetType().Name} to {typeof(TResult).Name}.", e);
+                }
+            }
+        }
+
+        protected object? InvokeRemote(int? clientId,
             string targetClass,
             string method,
             Type? returnType,
-            CancellationToken cancellationToken,
             params object?[] parameters)
         {
             checkThrowDisposed();
@@ -285,10 +335,52 @@ namespace ThothRpc.Base
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
             var awaitingCall = _awaitingCallPool.Rent();
+            awaitingCall.IsSynchronous = true;
             awaitingCall.ReturnType = returnType;
-            awaitingCall.TimeoutCancelSrc.CancelAfter(_requestTimeout);
-            var tcs = awaitingCall.TaskCompletionSource;
-            
+            var callId = addAwaitingCall(awaitingCall);
+
+            var payload = Pools.MethodCallDtoPool.Rent();
+            payload.CallId = callId;
+            payload.Method = method;
+            payload.ClassTarget = targetClass;
+            fillParameters(parameters, payload.ArgumentsData);
+
+            try
+            {
+                sendDto(DeliveryMode.ReliableOrdered, clientId, payload);
+                awaitingCall.ResetEvent.Wait(_requestTimeout);
+
+                if (awaitingCall.SyncException != null)
+                {
+                    throw awaitingCall.SyncException;
+                }
+                else
+                {
+                    return awaitingCall.SyncReturnData;
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                throw new TimeoutException("Operation has timed-out", e);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                lock (_callStateLock)
+                {
+                    _awaitingCallByCallId.Remove(callId);
+                }
+
+                _awaitingCallPool.Recycle(awaitingCall);
+                Pools.MethodCallDtoPool.Recycle(payload);
+            }
+        }
+
+        uint addAwaitingCall(AwaitingCall awaitingCall)
+        {
             uint callId = 0;
 
             lock (_callStateLock)
@@ -306,17 +398,39 @@ namespace ThothRpc.Base
                 }
 
                 callId = _currentCallId;
-                _tcsByCallId.Add(callId, awaitingCall);
+                _awaitingCallByCallId.Add(callId, awaitingCall);
             }
+
+            return callId;
+        }
+
+        protected async ValueTask<object?> InvokeRemoteAsync(
+            int? clientId,
+            string targetClass,
+            string method,
+            Type? returnType,
+            CancellationToken cancellationToken,
+            params object?[] parameters)
+        {
+            checkThrowDisposed();
+            Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
+            Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
+
+            var awaitingCall = _awaitingCallPool.Rent();
+            awaitingCall.IsSynchronous = false;
+            awaitingCall.ReturnType = returnType;
+            awaitingCall.TimeoutCancelSrc.CancelAfter(_requestTimeout);
+            var tcs = awaitingCall.TaskCompletionSource;
+            var callId = addAwaitingCall(awaitingCall);
 
             void cancelCall(uint callId, Exception exception)
             {
                 lock (_callStateLock)
                 {
-                    if (_tcsByCallId.TryGetValue(callId, out var call))
+                    if (_awaitingCallByCallId.TryGetValue(callId, out var call))
                     {
                         tcs.SetException(exception);
-                        _tcsByCallId.Remove(callId);
+                        _awaitingCallByCallId.Remove(callId);
                     }
                 }
             }
@@ -332,10 +446,10 @@ namespace ThothRpc.Base
             fillParameters(parameters, payload.ArgumentsData);
 
             var task = new ValueTask<object?>(tcs, tcs.Version);
-            await sendDtoAsync(DeliveryMode.ReliableOrdered, clientId, payload).ConfigureAwait(false);
 
             try
             {
+                await sendDtoAsync(DeliveryMode.ReliableOrdered, clientId, payload).ConfigureAwait(false);
                 var result = await task.ConfigureAwait(false);
                 return result;
             }
@@ -347,7 +461,7 @@ namespace ThothRpc.Base
             {
                 lock (_callStateLock)
                 {
-                    _tcsByCallId.Remove(callId);
+                    _awaitingCallByCallId.Remove(callId);
                 }
 
                 _awaitingCallPool.Recycle(awaitingCall);
@@ -426,7 +540,6 @@ namespace ThothRpc.Base
 
         async ValueTask processMethodCallAsync(IPeerInfo? peer, MethodCallDto dto)
         {
-            //var sw = Stopwatch.StartNew();
             MethodResponseDto? responseDto = null;
 
             if (dto.CallId.HasValue)
@@ -451,8 +564,10 @@ namespace ThothRpc.Base
                 try
                 {
                     _currentPeer = peer;
+
                     result = await MethodInvoker.InvokeMethodAsync(target, dto.Method,
                         dto.ArgumentsData, _objectDeserializer).ConfigureAwait(false);
+
                 }
                 catch (InvalidCallException e)
                 {
@@ -510,21 +625,42 @@ namespace ThothRpc.Base
         {
             lock (_callStateLock)
             {
-                if (_tcsByCallId.TryGetValue(dto.CallId, out var awaitingCall))
+                if (_awaitingCallByCallId.TryGetValue(dto.CallId, out var awaitingCall))
                 {
-                    if (dto.Exception != null)
+                    if (awaitingCall.IsSynchronous)
                     {
-                        awaitingCall.TaskCompletionSource
-                            .SetException(dto.Exception.Unpack());
-                    }
-                    else if (dto.ResultData == null)
-                    {
-                        awaitingCall.TaskCompletionSource.SetResult(null);
+                        if (dto.Exception != null)
+                        {
+                            awaitingCall.SyncException = dto.Exception.Unpack();
+                        }
+                        else if (dto.ResultData == null)
+                        {
+                            awaitingCall.SyncReturnData = null;
+                        }
+                        else
+                        {
+                            var des = _objectDeserializer(awaitingCall.ReturnType ?? typeof(object), dto.ResultData.Value);
+                            awaitingCall.SyncReturnData = des;
+                        }
+
+                        awaitingCall.ResetEvent.Set();
                     }
                     else
                     {
-                        var des = _objectDeserializer(awaitingCall.ReturnType ?? typeof(object), dto.ResultData.Value);
-                        awaitingCall.TaskCompletionSource.SetResult(des);
+                        if (dto.Exception != null)
+                        {
+                            awaitingCall.TaskCompletionSource
+                                .SetException(dto.Exception.Unpack());
+                        }
+                        else if (dto.ResultData == null)
+                        {
+                            awaitingCall.TaskCompletionSource.SetResult(null);
+                        }
+                        else
+                        {
+                            var des = _objectDeserializer(awaitingCall.ReturnType ?? typeof(object), dto.ResultData.Value);
+                            awaitingCall.TaskCompletionSource.SetResult(des);
+                        }
                     }
                 }
                 else
@@ -533,6 +669,12 @@ namespace ThothRpc.Base
                         $"server payload id {dto.CallId}. Was the method cancelled?");
                 }
             }
+        }
+
+        void sendDto(DeliveryMode deliveryMode, int? clientId, IThothDto dto)
+        {
+            var data = _packetAnalyzer.SerializePacket(dto);
+            SendData(deliveryMode, clientId, data);
         }
 
         async ValueTask sendDtoAsync(DeliveryMode deliveryMode, int? clientId, IThothDto dto)
@@ -608,8 +750,17 @@ namespace ThothRpc.Base
 
         protected abstract void SendData(DeliveryMode deliveryMode, int? clientId, byte[] data);
 
-        private class AwaitingCall
+        private class AwaitingCall : IDisposable
         {
+            public bool IsSynchronous { get; set; }
+
+            public ManualResetEventSlim ResetEvent { get; set; } 
+                = new ManualResetEventSlim(false);
+
+            public object? SyncReturnData { get; set; }
+
+            public Exception? SyncException { get; set; }
+
             public ManualResetValueTaskSource<object?> TaskCompletionSource { get; }
                 = new ManualResetValueTaskSource<object?>()
                 {
@@ -620,6 +771,12 @@ namespace ThothRpc.Base
 
             public CancellationTokenSource TimeoutCancelSrc { get; set; } 
                 = new CancellationTokenSource();
+
+            public void Dispose()
+            {
+                ResetEvent.Dispose();
+                TimeoutCancelSrc.Dispose();
+            }
         }
     }
 }
