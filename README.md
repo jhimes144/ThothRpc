@@ -1,6 +1,6 @@
 # ThothRpc
 
-ThothRpc is a drop-in, holistic, lightweight, full duplex and bidirectional RPC framework for .Net. It's dead simple but powerful. It is completely platform agnostic and modular, making no assumptions of what kind of project you are building. The transport and object serialization (for parameters and method returns) layers are separate from the base library and custom implementation of these layers are easy to make giving you the freedom for you to easily build-your-own RPC system.
+ThothRpc is a drop-in, holistic, fully AOT compatible, lightweight, full duplex and bidirectional RPC framework for .Net. It's dead simple but powerful. It is completely platform agnostic and modular, making no assumptions of what kind of project you are building. The transport and object serialization (for parameters and method returns) layers are separate from the base library and custom implementation of these layers are easy to make giving you the freedom for you to easily build-your-own RPC system.
 
 Of course, it wouldn’t be simple if these layers were not included for you. This library comes with a reliable-and-ordered UDP transport layer built off of [LiteNetLib](https://github.com/RevenantX/LiteNetLib) and a serialization layer built off of speedy [Message Pack](https://github.com/neuecc/MessagePack-CSharp) with a secure http/2 web based transport solution on the road map.
 
