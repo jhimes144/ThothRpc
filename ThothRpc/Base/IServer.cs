@@ -13,6 +13,7 @@ namespace ThothRpc.Base
         void SendData(int? clientId, DeliveryMode deliveryMode, byte[] data);
         void Listen(string addressIPv4, string addressIPv6, int port, string connectionKey);
         void Listen(int port, string connectionKey);
+        void Stop();
         void ProcessRequests();
     }
 }

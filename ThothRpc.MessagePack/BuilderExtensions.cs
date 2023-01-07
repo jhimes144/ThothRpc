@@ -6,19 +6,19 @@ namespace ThothRpc.MessagePack
 {
     public static class BuilderExtensions
     {
-        public static ClientHubBuilder UseMessagePack(this ClientHubBuilder builder)
+        public static ClientHubBuilder UseMessagePack(this ClientHubBuilder builder, MessagePackSerializerOptions options = null)
         {
-            ApplyHubConfiguration(builder.HubConfiguration);
+            ApplyHubConfiguration(builder.HubConfiguration, options);
             return builder;
         }
 
-        public static ServerHubBuilder UseMessagePack(this ServerHubBuilder builder)
+        public static ServerHubBuilder UseMessagePack(this ServerHubBuilder builder, MessagePackSerializerOptions options = null)
         {
-            ApplyHubConfiguration(builder.HubConfiguration);
+            ApplyHubConfiguration(builder.HubConfiguration, options);
             return builder;
         }
 
-        public static void ApplyHubConfiguration(HubConfiguration configuration)
+        public static void ApplyHubConfiguration(HubConfiguration configuration, MessagePackSerializerOptions options = null)
         {
             configuration.ObjectSerializer = obj =>
             {
@@ -27,7 +27,7 @@ namespace ThothRpc.MessagePack
                     return Array.Empty<byte>();
                 }
 
-                return MessagePackSerializer.Serialize(obj);
+                return MessagePackSerializer.Serialize(obj, options);
             };
 
             configuration.ObjectDeserializer = (targetType, buffer) =>
@@ -37,7 +37,7 @@ namespace ThothRpc.MessagePack
                     return default;
                 }
 
-                return MessagePackSerializer.Deserialize(targetType, buffer);
+                return MessagePackSerializer.Deserialize(targetType, buffer, options);
             };
         }
     }

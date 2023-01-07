@@ -59,13 +59,6 @@ namespace ThothRpc.Utility
             return methods;
         }
 
-        /// <summary>
-        /// IMPORTANT: MethodCallData that is returned in a thread static field to save on GC
-        /// and should not be used across threads, and used quickly
-        /// </summary>
-        /// <param name="expression"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
         public static (string MethodName, object?[] Arguments) EvaluateMethodCall(LambdaExpression expression)
         {
             if (expression.Body is MethodCallExpression methodCall)
@@ -82,7 +75,8 @@ namespace ThothRpc.Utility
                     }
                     else
                     {
-                        throw new Exception("Expression arguments must be either from variables, fields, or properties.");
+                        throw new NotSupportedException("For performance reasons, " +
+                            "expression arguments must be either from variables, fields, or properties.");
                     }
 
                     i++;

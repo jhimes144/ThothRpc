@@ -53,7 +53,7 @@ namespace ThothRpc.LiteNetLib
             {
                 if (_connectionState != ConnectionState.Disconnected)
                 {
-                    throw new InvalidOperationException("A connection is either already made or in progress.");
+                    Disconnect();
                 }
 
                 _connectionState = ConnectionState.Connecting;
@@ -85,6 +85,16 @@ namespace ThothRpc.LiteNetLib
             });
 
             await _connectionCompletionSource.Task;
+        }
+
+        public void Disconnect()
+        {
+            _manager.Stop();
+
+            lock (_connectionStateLock)
+            {
+                _connectionState = ConnectionState.Disconnected;
+            }
         }
 
         public void SendData(DeliveryMode deliveryMode, byte[] data)

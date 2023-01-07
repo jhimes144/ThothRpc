@@ -35,6 +35,12 @@ namespace ThothRpc.LiteNetLib
             _manager.Start(port);
         }
 
+        public void Stop()
+        {
+            _manager.DisconnectAll();
+            _manager.Stop();
+        }
+
         protected override async void OnDataReceived(IPeerInfo? peerInfo, byte[] data)
         {
             if (peerInfo != null && _delegator != null)

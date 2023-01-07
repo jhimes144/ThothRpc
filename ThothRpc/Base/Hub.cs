@@ -140,8 +140,8 @@ namespace ThothRpc.Base
         [Obsolete]
         internal static void AttachLocalHubs(ServerHub server, ClientHub client)
         {
-            server.checkThrowDisposed();
-            client.checkThrowDisposed();
+            server.CheckThrowDisposed();
+            client.CheckThrowDisposed();
 
             server._localHubLock.EnterWriteLock();
             client._localHubLock.EnterWriteLock();
@@ -155,10 +155,15 @@ namespace ThothRpc.Base
 
         protected void RegisterBase(object instance, string? targetName = null, IEnumerable<string>? methodNames = null)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             Guard.AgainstNull(nameof(instance), instance);
             targetName ??= instance.GetType().FullName;
             Guard.AgainstNullOrWhiteSpaceString(targetName, nameof(targetName));
+
+            if (ThothOptimizer.Instance.IsOptimized && methodNames != null)
+            {
+                throw new InvalidOperationException("methodNames cannot be provided when optimization is enabled.");
+            }
 
             _targetsLock.EnterWriteLock();
 
@@ -218,7 +223,7 @@ namespace ThothRpc.Base
 
         protected void UnregisterBase(string targetName) 
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetName, nameof(targetName));
 
             _targetsLock.EnterWriteLock();
@@ -236,7 +241,7 @@ namespace ThothRpc.Base
         protected ValueTask<TResult> InvokeRemoteAsync<TResult, TTarget>(int? clientId,
             Expression<Func<TTarget, TResult>> expression, CancellationToken cancellationToken = default)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             return InvokeRemoteAsync<TResult>(clientId, typeof(TTarget).FullName!,
@@ -246,7 +251,7 @@ namespace ThothRpc.Base
         protected async ValueTask InvokeRemoteAsync<TTarget>(int? clientId,
             Expression<Action<TTarget>> expression, CancellationToken cancellationToken = default)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             await InvokeRemoteAsync<object>(clientId, typeof(TTarget).FullName!,
@@ -257,7 +262,7 @@ namespace ThothRpc.Base
             (int? clientId, string targetClass, string method,
             CancellationToken cancellationToken, params object?[] parameters)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             var result = await InvokeRemoteAsync(clientId, targetClass, method,
                 typeof(TResult), cancellationToken, parameters).ConfigureAwait(false);
 
@@ -282,7 +287,7 @@ namespace ThothRpc.Base
         protected TResult InvokeRemote<TResult, TTarget>(int? clientId,
             Expression<Func<TTarget, TResult>> expression)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             return InvokeRemote<TResult>(clientId, typeof(TTarget).FullName!,
@@ -292,7 +297,7 @@ namespace ThothRpc.Base
         protected void InvokeRemote<TTarget>(int? clientId,
             Expression<Action<TTarget>> expression)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
 
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
             InvokeRemote<object>(clientId, typeof(TTarget).FullName!, MethodName, Arguments);
@@ -301,7 +306,7 @@ namespace ThothRpc.Base
         protected TResult InvokeRemote<TResult>
             (int? clientId, string targetClass, string method, params object?[] parameters)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
 
             var result = InvokeRemote(clientId, targetClass,
                 method, typeof(TResult), parameters);
@@ -330,7 +335,7 @@ namespace ThothRpc.Base
             Type? returnType,
             params object?[] parameters)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
@@ -412,7 +417,7 @@ namespace ThothRpc.Base
             CancellationToken cancellationToken,
             params object?[] parameters)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
@@ -472,7 +477,7 @@ namespace ThothRpc.Base
         protected void InvokeForgetRemote<TTarget>(DeliveryMode deliveryMode, int? clientId,
             Expression<Action<TTarget>> expression)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
 
             InvokeForgetRemote(deliveryMode, clientId, typeof(TTarget).FullName!,
@@ -482,7 +487,7 @@ namespace ThothRpc.Base
         protected async void InvokeForgetRemote(DeliveryMode deliveryMode, int? clientId, string targetClass,
             string method, params object?[] parameters)
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             Guard.AgainstNullOrWhiteSpaceString(targetClass, nameof(targetClass));
             Guard.AgainstNullOrWhiteSpaceString(method, nameof(method));
 
@@ -519,7 +524,7 @@ namespace ThothRpc.Base
 
         public virtual void Dispose()
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             _disposed = true;
             _targetsLock.Dispose();
             _localHubLock.Dispose();
@@ -534,7 +539,7 @@ namespace ThothRpc.Base
         /// <returns></returns>
         public IPeerInfo? GetCurrentPeer()
         {
-            checkThrowDisposed();
+            CheckThrowDisposed();
             return _currentPeer;
         }
 
@@ -740,7 +745,7 @@ namespace ThothRpc.Base
             }
         }
 
-        void checkThrowDisposed()
+        protected void CheckThrowDisposed()
         {
             if (_disposed)
             {

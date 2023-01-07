@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using ThothRpc.Attributes;
 using ThothRpc.Base;
 using ThothRpc.Events;
+using ThothRpc.Optimizer;
 using ThothRpc.Utility;
 
 namespace ThothRpc
@@ -52,6 +53,7 @@ namespace ThothRpc
         /// </summary>
         public void ProcessRequests()
         {
+            CheckThrowDisposed();
             _server.ProcessRequests();
         }
 
@@ -64,6 +66,7 @@ namespace ThothRpc
         /// <param name="connectionKey">The connection key to use for authentication.</param>
         public void Listen(string addressIPv4, string addressIPv6, int port, string connectionKey)
         {
+            CheckThrowDisposed();
             _server.Listen(addressIPv4, addressIPv6, port, connectionKey);
         }
 
@@ -74,13 +77,26 @@ namespace ThothRpc
         /// <param name="connectionKey">The connection key to use for authentication.</param>
         public void Listen(int port, string connectionKey)
         {
+            CheckThrowDisposed();
             _server.Listen(port, connectionKey);
+        }
+
+        /// <summary>
+        /// Stops listening for new connections and closes all current connections. If Listen was never called, this does nothing.
+        /// </summary>
+        public void Stop()
+        {
+            CheckThrowDisposed();
+            _server.Stop();
         }
 
         /// <summary>
         /// Registers an object instance with the server hub. This allows the instance to be called from clients.
         /// All public methods decorated with the <see cref="ThothMethodAttribute"/> will be used unless methodNames
         /// is specified, in which case method names provided will be used.
+        /// <para>
+        /// Note: Populating the methodNames parameter requires that optimization hasn't been enabled. See <seealso cref="ThothOptimizer"/>
+        /// </para>
         /// </summary>
         /// <param name="instance">The instance to use.</param>
         /// <param name="methodNames">If specified, methods listed will be marked as accessible by peers.</param>
@@ -101,6 +117,9 @@ namespace ThothRpc
         /// The difference between this method and <see cref="Register(object, string?, IEnumerable{string}?)"/>
         /// is that this method will register the target name under <typeparamref name="T"/> type full name as oppose to
         /// GetType() directly on the instance.
+        /// </para>
+        /// <para>
+        /// Note: Populating the methodNames parameter requires that optimization hasn't been enabled. See <seealso cref="ThothOptimizer"/>
         /// </para>
         /// </summary>
         /// <param name="methodNames">If specified, methods listed will be marked as accessible by peers.</param>
@@ -316,6 +335,7 @@ namespace ThothRpc
         /// </summary>
         public override void Dispose()
         {
+            CheckThrowDisposed();
             _server.Dispose();
             base.Dispose();
         }

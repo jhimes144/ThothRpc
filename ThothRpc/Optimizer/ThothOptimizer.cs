@@ -181,7 +181,7 @@ namespace ThothRpc.Optimizer
 
             if (value == null)
             {
-                throw new InvalidCallException($"Cannot find method by id {id}.");
+                throw new InvalidCallException($"Cannot find method by optimized id {id}.");
             }
 
             return value;
@@ -195,7 +195,7 @@ namespace ThothRpc.Optimizer
 
             if (value == 0)
             {
-                throw new InvalidCallException($"Cannot find id for {target} + {method}.");
+                throw new InvalidCallException($"Cannot find optimized id for {target} + {method}.");
             }
 
             return value;

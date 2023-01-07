@@ -32,6 +32,11 @@ namespace ThothRpc
         public event EventHandler? Disconnected;
 
         /// <summary>
+        /// Indicates the current connection state with the server.
+        /// </summary>
+        public ConnectionState ConnectionState => _client.ConnectionState;
+
+        /// <summary>
         /// Initializes a new instance of the ClientHub class with the specified client and configuration.
         /// </summary>
         /// <param name="client">The IClient instance to use for communication with the server.</param>
@@ -96,6 +101,14 @@ namespace ThothRpc
             }
 
             return _client.ConnectAsync(address, port, connectionKey);
+        }
+
+        /// <summary>
+        /// Disconnects the client from the server.
+        /// </summary>
+        public void Disconnect()
+        {
+            _client.Disconnect();
         }
 
         /// <summary>
