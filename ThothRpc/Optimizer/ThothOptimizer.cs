@@ -143,8 +143,13 @@ namespace ThothRpc.Optimizer
                 if (methods.Select(m => m.Name).Count()
                     != methods.Select(m => m.Name).Distinct().Count())
                 {
+                    var dup = methods
+                        .GroupBy(m => m.Name)
+                        .First(g => g.Count() > 1).Key;
+
                     throw new NotSupportedException
-                        ("Overload methods annotated with ThothMethodAttribute are not supported.");
+                        ($"Overload methods annotated with ThothMethodAttribute are not supported. Class {type.FullName} Method {dup}. " +
+                        $"Be sure that you've marked methods with ThothMethod attribute in one place (either class or interface not both).");
                 }
 
                 if (methods.Count > 0)

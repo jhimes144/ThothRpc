@@ -41,6 +41,53 @@ namespace ThothRpc.Utility
 
         public static IEnumerable<MethodInfo> GetThothMethods(Type type)
         {
+            bool isMethodNew(MethodInfo method, IEnumerable<MethodInfo> others)
+            {
+                var methodParams = method.GetParameters();
+
+                foreach (var oMethod in others)
+                {
+                    var isDiff = oMethod.Name != method.Name 
+                        || method.ReturnType != oMethod.ReturnType;
+
+                    if (isDiff)
+                    {
+                        continue;
+                    }
+
+                    var oParams = oMethod.GetParameters();
+
+                    if (oParams.Length != methodParams.Length)
+                    {
+                        continue;
+                    }
+
+                    for (int i = 0; i < methodParams.Length; i++)
+                    {
+                        var param = methodParams[i];
+                        var oParam = oParams[i];
+
+                        if (param.ParameterType != oParam.ParameterType)
+                        {
+                            isDiff = true;
+                            break;
+                        }
+                    }
+
+                    if (isDiff)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+
             var methods = new List<MethodInfo>();
 
             methods.AddRange(type.GetMethods()
@@ -48,12 +95,12 @@ namespace ThothRpc.Utility
 
             foreach (var @interface in type.GetInterfaces())
             {
-                methods.AddRange(GetThothMethods(@interface));
+                methods.AddRange(GetThothMethods(@interface).Where(m => isMethodNew(m, methods)));
             }
 
             if (type.BaseType != null)
             {
-                methods.AddRange(GetThothMethods(type.BaseType));
+                methods.AddRange(GetThothMethods(type.BaseType).Where(m => isMethodNew(m, methods)));
             }
 
             return methods;
