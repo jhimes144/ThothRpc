@@ -42,7 +42,8 @@ namespace ThothRpc
 
             _server.Init(
                 delegator: this,
-                multiThreaded: config.RequestHandlingStrategy == RequestHandlingStrategy.MultiThreaded
+                requestHandling: config.RequestHandlingStrategy,
+                disconnectTimeout: config.DisconnectTimeout
             );
         }
 
@@ -323,6 +324,16 @@ namespace ThothRpc
         public void InvokeForgetAllClients<TTarget>(DeliveryMode deliveryMode, Expression<Action<TTarget>> expression)
         {
             InvokeForgetRemote(deliveryMode, null, expression);
+        }
+
+        /// <summary>
+        /// Returns a dictionary representing the currently connected peers by their ids.
+        /// </summary>
+        /// <returns>Dictionary of peers by peer id.</returns>
+        public IReadOnlyDictionary<int, IPeerInfo> GetPeers()
+        {
+            CheckThrowDisposed();
+            return _server.GetPeers();
         }
 
         protected override void SendData(DeliveryMode deliveryMode, int? peerId, byte[] data)

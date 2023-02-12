@@ -9,7 +9,7 @@ namespace ThothRpc.Base
     public interface IClient : IDisposable
     {
         ConnectionState ConnectionState { get; }
-        void Init(IClientDelegator delegator, TimeSpan connectingTimeout, bool multiThreaded);
+        void Init(IClientDelegator delegator, TimeSpan connectingTimeout, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout);
 
         Task ConnectAsync(string address, int port, string connectionKey);
         void SendData(DeliveryMode deliveryMode, byte[] data);

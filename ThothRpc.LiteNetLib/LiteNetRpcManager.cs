@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using ThothRpc.Exceptions;
 using ThothRpc.Models.Dto;
 using ThothRpc.Utility;
 
@@ -20,7 +21,7 @@ namespace ThothRpc.LiteNetLib
     public abstract class LiteNetRpcManager : IDisposable
     {
         bool _isClient;
-        bool _multiThreaded;
+        RequestHandlingStrategy _requestHandleMode;
 
         protected readonly NetManager _manager;
         protected readonly EventBasedNetListener _listener = new EventBasedNetListener();
@@ -54,10 +55,25 @@ namespace ThothRpc.LiteNetLib
             }
         }
 
-        protected void Init(bool multiThreaded)
+        protected void Init(RequestHandlingStrategy requestHandling, int disconnectTimeout)
         {
-            _multiThreaded = multiThreaded;
-            _manager.UnsyncedEvents = _multiThreaded;
+            _requestHandleMode = requestHandling;
+
+            _manager.UnsyncedEvents = _requestHandleMode == RequestHandlingStrategy.MultiThreaded 
+                || _requestHandleMode == RequestHandlingStrategy.SingleThreaded;
+
+            _manager.DisconnectTimeout = disconnectTimeout;
+        }
+
+        public IReadOnlyDictionary<int, IPeerInfo> GetPeers()
+        {
+            IReadOnlyDictionary<int, IPeerInfo> peers;
+
+            _clientsLock.EnterReadLock();
+            peers = _peersById.ToDictionary(p => p.Key, p => p.Value);
+            _clientsLock.ExitReadLock();
+
+            return peers;
         }
 
         private void onConnectionRequest(ConnectionRequest request)
@@ -135,10 +151,9 @@ namespace ThothRpc.LiteNetLib
         /// <inheritdoc/>
         public void ProcessRequests()
         {
-            if (_multiThreaded)
+            if (_requestHandleMode != RequestHandlingStrategy.Manual)
             {
-                throw new InvalidOperationException("This method cannot be called when" +
-                    " configured for multithreaded request handling.");
+                throw new InvalidOperationException("This method requires a request handling strategy of Manual to be configured");
             }
 
             _manager.PollEvents();
@@ -155,7 +170,7 @@ namespace ThothRpc.LiteNetLib
                 {
                     if (!_peersById.TryGetValue(peerId.Value, out var peerInfo))
                     {
-                        throw new InvalidOperationException($"Peer by id {peerId} cannot be found.");
+                        throw new DisconnectedException($"Peer by id {peerId} cannot be found.");
                     }
 
                     sendToPeer(peerInfo, deliveryMode, data);
@@ -168,7 +183,7 @@ namespace ThothRpc.LiteNetLib
 
                         if (peerInfo == null)
                         {
-                            throw new InvalidOperationException("Not connected to server.");
+                            throw new DisconnectedException("Not connected to server.");
                         }
 
                         sendToPeer(peerInfo, deliveryMode, data);
@@ -201,7 +216,7 @@ namespace ThothRpc.LiteNetLib
 
         void onNetworkReceived(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
-            if (_multiThreaded)
+            if (_requestHandleMode == RequestHandlingStrategy.MultiThreaded)
             {
                 Task.Run(() =>
                 {

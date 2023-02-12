@@ -38,6 +38,11 @@ namespace ThothRpc
         RequestHandlingStrategy RequestHandlingStrategy { get; }
 
         /// <summary>
+        /// Maximum amount of time waited without a packet (including keepalives) before the connection is considered closed.
+        /// </summary>
+        TimeSpan DisconnectTimeout { get; }
+
+        /// <summary>
         /// The function that the hub should use to serialize objects.
         /// </summary>
         SerializeObject ObjectSerializer { get; }

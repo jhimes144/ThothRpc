@@ -16,6 +16,9 @@ namespace ThothRpc
         public TimeSpan ConnectingTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <inheritdoc/>
+        public TimeSpan DisconnectTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+        /// <inheritdoc/>
         public bool SwallowExceptions { get; set; }
 
         /// <inheritdoc/>

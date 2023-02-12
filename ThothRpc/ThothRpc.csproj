@@ -31,8 +31,4 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.2.1" />
 	</ItemGroup>
-	
-	<ItemGroup>
-	  <Folder Include="Primitives\" />
-	</ItemGroup>
 </Project>

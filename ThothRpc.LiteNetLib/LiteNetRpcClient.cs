@@ -40,11 +40,11 @@ namespace ThothRpc.LiteNetLib
 
         public LiteNetRpcClient() : base(true) { }
 
-        public void Init(IClientDelegator delegator, TimeSpan connectingTimeout, bool multiThreaded)
+        public void Init(IClientDelegator delegator, TimeSpan connectingTimeout, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout)
         {
             _delegator = delegator;
             _connectingTimeout = connectingTimeout;
-            Init(multiThreaded);
+            Init(requestHandling, (int)disconnectTimeout.TotalMilliseconds);
         }
 
         public async Task ConnectAsync(string address, int port, string connectionKey)

@@ -49,8 +49,9 @@ namespace ThothRpc
 
             _client.Init(
                 delegator: this,
-                connectingTimeout : config.ConnectingTimeout,
-                multiThreaded: config.RequestHandlingStrategy == RequestHandlingStrategy.MultiThreaded
+                connectingTimeout: config.ConnectingTimeout,
+                requestHandling: config.RequestHandlingStrategy,
+                disconnectTimeout: config.DisconnectTimeout
             );
         }
 

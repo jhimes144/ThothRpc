@@ -15,10 +15,10 @@ namespace ThothRpc.LiteNetLib
 
         public LiteNetRpcServer() : base(false) { }
 
-        public void Init(IServerDelegator delegator, bool multiThreaded)
+        public void Init(IServerDelegator delegator, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout)
         {
             _delegator = delegator;
-            Init(multiThreaded);
+            Init(requestHandling, (int)disconnectTimeout.TotalMilliseconds);
         }
 
         /// <inheritdoc/>
