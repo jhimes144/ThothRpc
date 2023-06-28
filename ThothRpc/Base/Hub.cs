@@ -680,6 +680,7 @@ namespace ThothRpc.Base
         {
             var data = _packetAnalyzer.SerializePacket(dto);
             SendData(deliveryMode, clientId, data);
+            logDtoSend(dto, data.Length);
         }
 
         async ValueTask sendDtoAsync(DeliveryMode deliveryMode, int? clientId, IThothDto dto)
@@ -703,6 +704,16 @@ namespace ThothRpc.Base
             {
                 var data = _packetAnalyzer.SerializePacket(dto);
                 SendData(deliveryMode, clientId, data);
+                logDtoSend(dto, data.Length);
+            }
+        }
+
+        void logDtoSend(IThothDto dto, int length)
+        {
+            if (Logging.LogMethodCalls && Logging.InfoCallback != null
+                && dto is MethodCallDto methodCall)
+            {
+                Logging.InfoCallback($"Called '{methodCall.ClassTarget} -> {methodCall.Method} | {length} byte(s)");
             }
         }
 

@@ -13,6 +13,16 @@ namespace ThothRpc
     public static class Logging
     {
         /// <summary>
+        /// Gets or sets a value indicating whether logging of method calls is enabled.
+        /// </summary>
+        public static bool LogMethodCalls { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether logging of method receives is enabled.
+        /// </summary>
+        public static bool LogMethodReceives { get; set; } = true;
+
+        /// <summary>
         /// Callback that if specified, will fire for info log entries.
         /// Logic for this callback should run as quick as possible as to not block internal processing.
         /// </summary>

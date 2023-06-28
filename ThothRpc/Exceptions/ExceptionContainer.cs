@@ -37,6 +37,8 @@ namespace ThothRpc.Exceptions
                 ? "An error occurred on the remote peer." :
                 exception.Message;
 
+            // ide will say unnessary assignment, do not listen will break .net standard build
+
             return exception switch
             {
                 CallFailedException callFailedException => new ExceptionContainer
