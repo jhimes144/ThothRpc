@@ -214,7 +214,7 @@ namespace ThothRpc.LiteNetLib
             _manager.TriggerUpdate();
         }
 
-        void onNetworkReceived(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        void onNetworkReceived(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod)
         {
             if (_requestHandleMode == RequestHandlingStrategy.MultiThreaded)
             {
