@@ -45,12 +45,13 @@ namespace ThothRpc.Base
             _memManager.MaximumFreeSmallPoolBytes = maximumFreeSmallPoolBytes;
         }
 
-        public IThothDto DeserializePacket(byte[] data)
+        public IThothDto DeserializePacket(ReadOnlyMemory<byte> data)
         {
             MethodResponseDto? methodResponse;
             MethodCallDto? methodCall;
+            var dataS = data.Span;
 
-            var packetType = (PacketType)data[0];
+            var packetType = (PacketType)dataS[0];
             var pos = 1;
 
             if (containsFlag(packetType, PacketType.IsMethodCall)
@@ -60,28 +61,28 @@ namespace ThothRpc.Base
 
                 if (!packetType.HasFlag(PacketType.IsMethodCall_NoCallId))
                 {
-                    methodCall.CallId = BitConversion.ReadUInt(data, pos);
+                    methodCall.CallId = BitConversion.ReadUInt(dataS, pos);
                     pos += sizeof(uint);
                 }
 
-                var cTL = data[pos];
+                var cTL = dataS[pos];
                 pos++;
 
-                methodCall.ClassTarget = Encoding.UTF8.GetString(data, pos, cTL);
+                methodCall.ClassTarget = Encoding.UTF8.GetString(dataS.Slice(pos, cTL));
                 pos += cTL;
 
-                var mL = data[pos];
+                var mL = dataS[pos];
                 pos++;
 
-                methodCall.Method = Encoding.UTF8.GetString(data, pos, mL);
+                methodCall.Method = Encoding.UTF8.GetString(dataS.Slice(pos, mL));
                 pos += mL;
 
                 while (pos < data.Length)
                 {
-                    var argLength = BitConversion.ReadInt(data, pos);
+                    var argLength = BitConversion.ReadInt(dataS, pos);
                     pos += sizeof(int);
 
-                    methodCall.ArgumentsData.Add(new ReadOnlyMemory<byte>(data, pos, argLength));
+                    methodCall.ArgumentsData.Add(data.Slice(pos, argLength));
                     pos += argLength;
                 }
 
@@ -99,11 +100,11 @@ namespace ThothRpc.Base
 
                 if (!packetType.HasFlag(PacketType.IsMethodCall_NoCallId))
                 {
-                    methodCall.CallId = BitConversion.ReadUInt(data, pos);
+                    methodCall.CallId = BitConversion.ReadUInt(dataS, pos);
                     pos += sizeof(uint);
                 }
 
-                var targetId = BitConversion.ReadUShort(data, pos);
+                var targetId = BitConversion.ReadUShort(dataS, pos);
                 pos += sizeof(ushort);
 
                 var rec = _optimizer.GetRecFromId(targetId);
@@ -112,10 +113,10 @@ namespace ThothRpc.Base
 
                 while (pos < data.Length)
                 {
-                    var argLength = BitConversion.ReadInt(data, pos);
+                    var argLength = BitConversion.ReadInt(dataS, pos);
                     pos += sizeof(int);
 
-                    methodCall.ArgumentsData.Add(new ReadOnlyMemory<byte>(data, pos, argLength));
+                    methodCall.ArgumentsData.Add(data.Slice(pos, argLength));
                     pos += argLength;
                 }
 
@@ -150,30 +151,31 @@ namespace ThothRpc.Base
         }
 
         static void populateMethodResponse(PacketType packetType,
-            byte[] data, MethodResponseDto methodResponse, ExceptionType? exceptionType,
+            ReadOnlyMemory<byte> data, MethodResponseDto methodResponse, ExceptionType? exceptionType,
             ref int pos)
         {
-            methodResponse.CallId = BitConversion.ReadUInt(data, pos);
+            var dataS = data.Span;
+            methodResponse.CallId = BitConversion.ReadUInt(dataS, pos);
             pos += sizeof(uint);
 
             if (!packetType.HasFlag(PacketType.IsMethodResponse_NoResult))
             {
-                var rL = BitConversion.ReadInt(data, pos);
+                var rL = BitConversion.ReadInt(dataS, pos);
                 pos += sizeof(int);
 
-                methodResponse.ResultData = new ReadOnlyMemory<byte>(data, pos, rL);
+                methodResponse.ResultData = data.Slice(pos, rL);
                 pos += rL;
             }
 
             if (exceptionType.HasValue)
             {
-                var ml = BitConversion.ReadInt(data, pos);
+                var ml = BitConversion.ReadInt(dataS, pos);
                 pos += sizeof(int);
 
                 methodResponse.Exception = new ExceptionContainer
                 {
                     Type = exceptionType.Value,
-                    Message = Encoding.UTF8.GetString(data, pos, ml)
+                    Message = Encoding.UTF8.GetString(dataS.Slice(pos, ml))
                 };
             }
         }

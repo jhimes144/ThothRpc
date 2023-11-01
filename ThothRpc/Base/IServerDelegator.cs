@@ -24,6 +24,6 @@ namespace ThothRpc.Base
         void OnPeerDisconnected(IPeerInfo client);
 
         // data must be a free instance, no other users
-        ValueTask OnDataReceivedAsync(IPeerInfo client, byte[] data);
+        ValueTask OnDataReceivedAsync(IPeerInfo client, ReadOnlyMemory<byte> data);
     }
 }

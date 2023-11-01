@@ -13,6 +13,8 @@ namespace ThothRpc.Tests.TestHelpers
 
         public TestServer Server { get; set; }
 
+        public ConnectionState ConnectionState => throw new NotImplementedException();
+
         public Task ConnectAsync(string address, int port, string connectionKey)
         {
             return default;
@@ -35,6 +37,21 @@ namespace ThothRpc.Tests.TestHelpers
         public void ReceiveData(byte[] data)
         {
             _clientDelegator.OnDataReceivedAsync(data);
+        }
+
+        public void Init(IClientDelegator delegator, TimeSpan connectingTimeout, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendDataAsync(DeliveryMode deliveryMode, byte[] data)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Disconnect()
+        {
+            throw new NotImplementedException();
         }
     }
 }

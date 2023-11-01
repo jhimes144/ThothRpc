@@ -10,22 +10,22 @@ namespace ThothRpc.Utility
 {
     internal static class BitConversion
     {
-        public static uint ReadUInt(byte[] bytes, int startIndex)
+        public static uint ReadUInt(ReadOnlySpan<byte> bytes, int startIndex)
         {
             return BinaryPrimitives.ReadUInt32LittleEndian
-                (new Span<byte>(bytes, startIndex, sizeof(uint)));
+                (bytes.Slice(startIndex, sizeof(uint)));
         }
 
-        public static int ReadInt(byte[] bytes, int startIndex)
+        public static int ReadInt(ReadOnlySpan<byte> bytes, int startIndex)
         {
             return BinaryPrimitives.ReadInt32LittleEndian
-                (new Span<byte>(bytes, startIndex, sizeof(int)));
+                (bytes.Slice(startIndex, sizeof(int)));
         }
 
-        public static ushort ReadUShort(byte[] bytes, int startIndex)
+        public static ushort ReadUShort(ReadOnlySpan<byte> bytes, int startIndex)
         {
             return BinaryPrimitives.ReadUInt16LittleEndian
-                (new Span<byte>(bytes, startIndex, sizeof(ushort)));
+                (bytes.Slice(startIndex, sizeof(ushort)));
         }
 
         public static void WriteUInt(Span<byte> span, uint value)

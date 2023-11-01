@@ -239,6 +239,16 @@ namespace ThothRpc.Base
         }
 
         protected ValueTask<TResult> InvokeRemoteAsync<TResult, TTarget>(int? clientId,
+            Expression<Func<TTarget, Task<TResult>>> expression, CancellationToken cancellationToken = default)
+        {
+            CheckThrowDisposed();
+            (string MethodName, object?[] Arguments) = ReflectionHelper.EvaluateMethodCall(expression);
+
+            return InvokeRemoteAsync<TResult>(clientId, typeof(TTarget).FullName!,
+                MethodName, cancellationToken, Arguments);
+        }
+
+        protected ValueTask<TResult> InvokeRemoteAsync<TResult, TTarget>(int? clientId,
             Expression<Func<TTarget, TResult>> expression, CancellationToken cancellationToken = default)
         {
             CheckThrowDisposed();
@@ -679,7 +689,7 @@ namespace ThothRpc.Base
         void sendDto(DeliveryMode deliveryMode, int? clientId, IThothDto dto)
         {
             var data = _packetAnalyzer.SerializePacket(dto);
-            SendData(deliveryMode, clientId, data);
+            SendDataAsync(deliveryMode, clientId, data).Wait();
             logDtoSend(dto, data.Length);
         }
 
@@ -703,7 +713,7 @@ namespace ThothRpc.Base
             if (!skipNetworkSend)
             {
                 var data = _packetAnalyzer.SerializePacket(dto);
-                SendData(deliveryMode, clientId, data);
+                await SendDataAsync(deliveryMode, clientId, data);
                 logDtoSend(dto, data.Length);
             }
         }
@@ -713,12 +723,33 @@ namespace ThothRpc.Base
             if (Logging.LogMethodCalls && Logging.InfoCallback != null
                 && dto is MethodCallDto methodCall)
             {
-                Logging.InfoCallback($"Called '{methodCall.ClassTarget} -> {methodCall.Method} | {length} byte(s)");
+                Logging.InfoCallback($"Called '{methodCall.ClassTarget} -> {methodCall.Method} " +
+                    $"| Call ID {methodCall.CallId} | {length} byte(s)");
+            }
+        }
+
+        void logDtoReceive(IThothDto dto)
+        {
+            if (Logging.LogMethodReceives && Logging.InfoCallback != null)
+            {
+                if (dto is MethodCallDto methodCall)
+                {
+                    Logging.InfoCallback($"Received method invocation request" +
+                        $" '{methodCall.ClassTarget} -> {methodCall.Method}");
+                }
+                else if (dto is MethodResponseDto response)
+                {
+                    var length = response.ResultData.HasValue ? response.ResultData.Value.Length : 0;
+                    Logging.InfoCallback($"Received method response" +
+                        $" 'Call ID {response.CallId} | {length} byte(s)");
+                }
             }
         }
 
         async ValueTask onObjectReceivedAsync(IPeerInfo? peerInfo, IThothDto obj)
         {
+            logDtoReceive(obj);
+
             switch (obj)
             {
                 case MethodCallDto methodCall:
@@ -732,13 +763,13 @@ namespace ThothRpc.Base
             }
         }
 
-        protected async ValueTask OnDataRecievedAsync(IPeerInfo? peerInfo, byte[] data)
+        protected async ValueTask OnDataRecievedAsync(IPeerInfo? peerInfo, ReadOnlyMemory<byte> data)
         {
             IThothDto? dto = null;
 
             try
             {
-                data = _dataIngressTransformer?.Invoke(data) ?? data;
+                //data = _dataIngressTransformer?.Invoke(data) ?? data;
                 dto = _packetAnalyzer.DeserializePacket(data);
 
                 await onObjectReceivedAsync(peerInfo, dto).ConfigureAwait(false);
@@ -764,7 +795,7 @@ namespace ThothRpc.Base
             }
         }
 
-        protected abstract void SendData(DeliveryMode deliveryMode, int? clientId, byte[] data);
+        protected abstract Task SendDataAsync(DeliveryMode deliveryMode, int? clientId, byte[] data);
 
         private class AwaitingCall : IDisposable
         {

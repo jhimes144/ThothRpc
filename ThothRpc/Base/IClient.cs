@@ -12,7 +12,7 @@ namespace ThothRpc.Base
         void Init(IClientDelegator delegator, TimeSpan connectingTimeout, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout);
 
         Task ConnectAsync(string address, int port, string connectionKey);
-        void SendData(DeliveryMode deliveryMode, byte[] data);
+        Task SendDataAsync(DeliveryMode deliveryMode, byte[] data);
         void Disconnect();
         void ProcessRequests();
     }

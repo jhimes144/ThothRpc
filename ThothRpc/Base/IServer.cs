@@ -10,7 +10,7 @@ namespace ThothRpc.Base
     {
         void Init(IServerDelegator delegator, RequestHandlingStrategy requestHandling, TimeSpan disconnectTimeout);
 
-        void SendData(int? clientId, DeliveryMode deliveryMode, byte[] data);
+        Task SendDataAsync(int? clientId, DeliveryMode deliveryMode, byte[] data);
         void Listen(string addressIPv4, string addressIPv6, int port, string connectionKey);
         void Listen(int port, string connectionKey);
         IReadOnlyDictionary<int, IPeerInfo> GetPeers();

@@ -97,9 +97,9 @@ namespace ThothRpc.LiteNetLib
             }
         }
 
-        public void SendData(DeliveryMode deliveryMode, byte[] data)
+        public Task SendDataAsync(DeliveryMode deliveryMode, byte[] data)
         {
-            SendData(null, deliveryMode, data);
+            return SendDataAsync(null, deliveryMode, data);
         }
 
         public void SetDelegator(IClientDelegator delegator)

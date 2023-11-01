@@ -25,7 +25,7 @@ namespace ThothRpc
         MultiThreaded,
 
         /// <summary>
-        /// Indicates that requests will be handled on a single background thread. This is great for clients, as it produces less overhead.
+        /// Indicates that requests will be handled on a single background thread or async. This is great for clients, as it produces less overhead.
         /// NOTE: Calling a blocking request/response call in the context of a response from a call will cause dead locks in this mode.
         /// </summary>
         SingleThreaded,

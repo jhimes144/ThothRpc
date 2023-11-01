@@ -170,6 +170,12 @@ namespace ThothRpc
             return InvokeRemoteAsync(null, expression, cancellationToken);
         }
 
+        public ValueTask<TResult> InvokeServerAsync<TTarget, TResult>(Expression<Func<TTarget, Task<TResult>>> expression,
+            CancellationToken cancellationToken = default)
+        {
+            return InvokeRemoteAsync(null, expression, cancellationToken);
+        }
+
         /// <summary>
         /// Invokes a server method asynchronously.
         /// </summary>
@@ -326,14 +332,14 @@ namespace ThothRpc
             Disconnected?.Invoke(this, EventArgs.Empty);
         }
 
-        ValueTask IClientDelegator.OnDataReceivedAsync(byte[] data)
+        ValueTask IClientDelegator.OnDataReceivedAsync(ReadOnlyMemory<byte> data)
         {
             return OnDataRecievedAsync(null, data);
         }
 
-        protected override void SendData(DeliveryMode deliveryMode, int? peerId, byte[] data)
+        protected override Task SendDataAsync(DeliveryMode deliveryMode, int? peerId, byte[] data)
         {
-            _client.SendData(deliveryMode, data);
+            return _client.SendDataAsync(deliveryMode, data);
         }
     }
 }

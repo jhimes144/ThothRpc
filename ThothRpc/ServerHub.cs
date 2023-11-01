@@ -336,9 +336,9 @@ namespace ThothRpc
             return _server.GetPeers();
         }
 
-        protected override void SendData(DeliveryMode deliveryMode, int? peerId, byte[] data)
+        protected override Task SendDataAsync(DeliveryMode deliveryMode, int? peerId, byte[] data)
         {
-            _server.SendData(peerId, deliveryMode, data);
+            return _server.SendDataAsync(peerId, deliveryMode, data);
         }
 
         /// <summary>
@@ -361,7 +361,7 @@ namespace ThothRpc
             PeerDisconnected?.Invoke(this, new PeerInfoEventArgs(peer));
         }
 
-        ValueTask IServerDelegator.OnDataReceivedAsync(IPeerInfo peer, byte[] data)
+        ValueTask IServerDelegator.OnDataReceivedAsync(IPeerInfo peer, ReadOnlyMemory<byte> data)
         {
             return OnDataRecievedAsync(peer, data);
         }

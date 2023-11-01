@@ -160,7 +160,7 @@ namespace ThothRpc.LiteNetLib
         }
 
         /// <inheritdoc/>
-        public void SendData(int? peerId, DeliveryMode deliveryMode, byte[] data)
+        public Task SendDataAsync(int? peerId, DeliveryMode deliveryMode, byte[] data)
         {
             _clientsLock.EnterReadLock();
 
@@ -205,6 +205,8 @@ namespace ThothRpc.LiteNetLib
             {
                 _clientsLock.ExitReadLock();
             }
+
+            return Task.CompletedTask;
         }
 
         void sendToPeer(IPeerInfo client, DeliveryMode mode, byte[] data)

@@ -10,6 +10,6 @@ namespace ThothRpc.Base
     {
         void OnConnected();
         void OnDisconnected();
-        ValueTask OnDataReceivedAsync(byte[] data);
+        ValueTask OnDataReceivedAsync(ReadOnlyMemory<byte> data);
     }
 }
